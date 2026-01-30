@@ -23,7 +23,8 @@ def draw_overlays(frame, tracking_result):
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         label = f"{name} ({engagement})"
-        cv2.putText(frame, label, (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        cv2.putText(
+            frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2
+        )
 
     return frame

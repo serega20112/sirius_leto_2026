@@ -26,7 +26,7 @@ class RegisterStudentUseCase:
             name=name,
             group_name=group_name,
             photo_path=full_path,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
 
         self.repo.save(student)

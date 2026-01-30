@@ -1,25 +1,28 @@
+import torch
 from ultralytics import YOLO
-import numpy as np
 
 
 class PersonDetector:
-    """Обертка над YOLO для обнаружения людей."""
-
     def __init__(self, model_path: str):
-        """Загружает модель YOLO."""
         self.model = YOLO(model_path)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model.to(self.device)
 
-    def detect_people(self, frame: np.ndarray):
-        """
-        Находит людей на изображении.
-        Возвращает список bounding boxes [x1, y1, x2, y2].
-        """
-        results = self.model(frame, classes=[0], verbose=False)
+    def track_people(self, frame):
+        results = self.model.track(
+            frame,
+            persist=True,
+            classes=[0],
+            conf=0.7,
+            verbose=False,
+            device=self.device,
+            tracker="bytetrack.yaml",
+        )
 
-        boxes = []
-        for result in results:
-            for box in result.boxes:
-                coords = box.xyxy[0].cpu().numpy().astype(int)
-                boxes.append(coords)
-
-        return boxes
+        output = []
+        if results[0].boxes.id is not None:
+            boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
+            ids = results[0].boxes.id.cpu().numpy().astype(int)
+            for box, track_id in zip(boxes, ids):
+                output.append({"bbox": box, "track_id": track_id})
+        return output

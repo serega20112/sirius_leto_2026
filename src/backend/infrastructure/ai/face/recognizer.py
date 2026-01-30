@@ -1,43 +1,27 @@
-import os
-import pandas as pd
 from deepface import DeepFace
-import numpy as np
+import os
 
 
 class FaceRecognizer:
-    """Сервис распознавания лиц через DeepFace."""
-
     def __init__(self, db_path: str):
-        """
-        db_path: Путь к папке с фото студентов (assets/images).
-        """
         self.db_path = db_path
-        os.makedirs(db_path, exist_ok=True)
+        DeepFace.build_model("Facenet")
 
-    def recognize(self, face_img: np.ndarray) -> str | None:
-        """
-        Пытается найти лицо в базе данных.
-        Возвращает имя файла (например, 'student_id.jpg') или None.
-        """
+    def recognize(self, face_img):
         try:
-            dfs = DeepFace.find(
+            results = DeepFace.find(
                 img_path=face_img,
                 db_path=self.db_path,
-                model_name="VGG-Face",
-                detector_backend="opencv",
-                distance_metric="cosine",
+                model_name="FaceNet",
+                detector_backend="skip",
                 enforce_detection=False,
-                silent=True
+                silent=True,
             )
-
-            if len(dfs) > 0 and not dfs[0].empty:
-                full_path = dfs[0].iloc[0]["identity"]
-                return os.path.basename(full_path)
-
+            if results and not results[0].empty:
+                return os.path.basename(results[0].iloc[0]["identity"])
+        except:
             return None
-
-        except Exception as e:
-            return(f"{e} ошибочка вышла XD")
+        return None
 
     def refresh_db(self):
         """Удаляет кэш DeepFace, чтобы подхватить новые фото."""

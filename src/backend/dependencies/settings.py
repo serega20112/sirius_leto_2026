@@ -7,6 +7,7 @@ load_dotenv(BASE_DIR / ".env")
 
 class Settings:
     """Настройки приложения."""
+
     BACKEND_ROOT = Path(__file__).resolve().parent.parent
     ASSETS_DIR = BACKEND_ROOT / "assets"
 

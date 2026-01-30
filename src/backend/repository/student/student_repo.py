@@ -15,21 +15,27 @@ class SqliteStudentRepository(BaseRepository):
             name=student.name,
             group_name=student.group_name,
             photo_path=student.photo_path,
-            created_at=student.created_at
+            created_at=student.created_at,
         )
         self.session.merge(student_model)
         self.session.commit()
 
     def find_by_id(self, student_id: str) -> Optional[Student]:
         """Находит студента по уникальному ID."""
-        model = self.session.query(StudentModel).filter(StudentModel.id == student_id).first()
+        model = (
+            self.session.query(StudentModel)
+            .filter(StudentModel.id == student_id)
+            .first()
+        )
         if not model:
             return None
         return self._to_entity(model)
 
     def find_by_name(self, name: str) -> Optional[Student]:
         """Находит студента по имени."""
-        model = self.session.query(StudentModel).filter(StudentModel.name == name).first()
+        model = (
+            self.session.query(StudentModel).filter(StudentModel.name == name).first()
+        )
         if not model:
             return None
         return self._to_entity(model)
@@ -46,5 +52,5 @@ class SqliteStudentRepository(BaseRepository):
             name=model.name,
             group_name=model.group_name,
             photo_path=model.photo_path,
-            created_at=model.created_at
+            created_at=model.created_at,
         )

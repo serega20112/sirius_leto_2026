@@ -20,12 +20,14 @@ class GetReportUseCase:
             student = students_cache.get(log.student_id)
             student_name = student.name if student else "Unknown"
 
-            report.append({
-                "id": log.id,
-                "student_name": student_name,
-                "timestamp": log.timestamp.isoformat(),
-                "is_late": log.is_late,
-                "engagement": log.engagement_score.value
-            })
+            report.append(
+                {
+                    "id": log.id,
+                    "student_name": student_name,
+                    "timestamp": log.timestamp.isoformat(),
+                    "is_late": log.is_late,
+                    "engagement": log.engagement_score.value,
+                }
+            )
 
         return report

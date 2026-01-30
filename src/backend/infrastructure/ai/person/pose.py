@@ -1,93 +1,82 @@
+import torch
+from ultralytics import YOLO
 import cv2
-import mediapipe as mp
 import numpy as np
 
 
 class PoseEstimator:
-    """
-    Анализ вовлеченности на основе направления взгляда (поворота головы).
-    Использует MediaPipe FaceMesh.
-    """
-
     def __init__(self):
-        self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-            refine_landmarks=True
+        self.model = YOLO("yolov8n-pose.pt")
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model.to(self.device)
+
+        # 3D точки (без изменений)
+        self.model_points = np.array(
+            [
+                (0.0, 0.0, 0.0),
+                (-225.0, 170.0, -135.0),
+                (225.0, 170.0, -135.0),
+                (-450.0, 0.0, -400.0),
+                (450.0, 0.0, -400.0),
+                (-700.0, -600.0, -450.0),
+                (700.0, -600.0, -450.0),
+            ],
+            dtype=np.float64,
         )
 
-    def estimate_engagement(self, frame: np.ndarray, bbox: list) -> str:
-        """
-        Определяет статус вовлеченности: 'high', 'medium', 'low', 'unknown'.
-
-        Args:
-            frame: Полный кадр видео (numpy array BGR).
-            bbox: Координаты лица/человека [x1, y1, x2, y2].
-        """
+    def estimate_engagement(self, frame, bbox):
+        if bbox is None:
+            return "unknown"
         x1, y1, x2, y2 = map(int, bbox)
-
-        h_img, w_img, _ = frame.shape
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(w_img, x2), min(h_img, y2)
-
-        if x2 - x1 < 10 or y2 - y1 < 10:
+        face_roi = frame[max(0, y1) : y2, max(0, x1) : x2]
+        if face_roi.size == 0:
             return "unknown"
 
-        face_roi = frame[y1:y2, x1:x2]
+        # Указываем девайс GPU
+        results = self.model(face_roi, verbose=False, conf=0.5, device=self.device)[0]
 
-        results = self.face_mesh.process(cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB))
-
-        if not results.multi_face_landmarks:
+        if results.keypoints is None or len(results.keypoints.xy) == 0:
             return "unknown"
 
-        landmarks = results.multi_face_landmarks[0]
+        kp = results.keypoints.xy[0].cpu().numpy()
+        if len(kp) < 7 or np.any(kp[:5] == 0):
+            return "unknown"
 
-        img_h, img_w, _ = face_roi.shape
+        image_points = np.array(
+            [
+                (kp[0][0] + x1, kp[0][1] + y1),
+                (kp[1][0] + x1, kp[1][1] + y1),
+                (kp[2][0] + x1, kp[2][1] + y1),
+                (kp[3][0] + x1, kp[3][1] + y1),
+                (kp[4][0] + x1, kp[4][1] + y1),
+                (kp[5][0] + x1, kp[5][1] + y1),
+                (kp[6][0] + x1, kp[6][1] + y1),
+            ],
+            dtype=np.float64,
+        )
 
-        face_2d = []
-        face_3d = []
+        focal_length = frame.shape[1]
+        cam_matrix = np.array(
+            [
+                [focal_length, 0, frame.shape[1] / 2],
+                [0, focal_length, frame.shape[0] / 2],
+                [0, 0, 1],
+            ],
+            dtype=np.float64,
+        )
 
-        key_points = [33, 263, 1, 61, 291, 199]
-
-        for idx, lm in enumerate(landmarks.landmark):
-            if idx in key_points:
-                x, y = int(lm.x * img_w), int(lm.y * img_h)
-                face_2d.append([x, y])
-                face_3d.append([x, y, lm.z])
-
-        face_2d = np.array(face_2d, dtype=np.float64)
-        face_3d = np.array(face_3d, dtype=np.float64)
-
-        focal_length = 1 * img_w
-        cam_matrix = np.array([
-            [focal_length, 0, img_h / 2],
-            [0, focal_length, img_w / 2],
-            [0, 0, 1]
-        ])
-
-        dist_matrix = np.zeros((4, 1), dtype=np.float64)
-
-        success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
-
+        success, rot_vec, trans_vec = cv2.solvePnP(
+            self.model_points, image_points, cam_matrix, np.zeros((4, 1))
+        )
         if not success:
             return "unknown"
 
-        rmat, jac = cv2.Rodrigues(rot_vec)
-        angles, mtxR, mtxQ, Q, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
+        rmat, _ = cv2.Rodrigues(rot_vec)
+        angles, _, _, _, _, _ = cv2.RQDecomp3x3(rmat)
+        pitch, yaw = angles[0], angles[1]
 
-
-        pitch = angles[0] * 360
-        yaw = angles[1] * 360
-
-
-        is_looking_away = abs(yaw) > 35
-        is_looking_down = pitch > 20
-
-        if is_looking_away or is_looking_down:
+        if abs(yaw) > 35 or pitch > 20:
             return "low"
-
-        if abs(yaw) > 15 or pitch > 10:
+        elif abs(yaw) > 15 or pitch > 10:
             return "medium"
-
         return "high"

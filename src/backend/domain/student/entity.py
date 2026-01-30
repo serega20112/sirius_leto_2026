@@ -5,6 +5,7 @@ from datetime import datetime
 @dataclass
 class Student:
     """Сущность студента в бизнес-логике."""
+
     id: str
     name: str
     group_name: str

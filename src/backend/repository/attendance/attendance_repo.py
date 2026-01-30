@@ -14,7 +14,7 @@ class SqliteAttendanceRepository(BaseRepository):
             student_id=log.student_id,
             timestamp=log.timestamp,
             is_late=log.is_late,
-            engagement_score=log.engagement_score.value
+            engagement_score=log.engagement_score.value,
         )
         self.session.add(model)
         self.session.commit()
@@ -24,14 +24,20 @@ class SqliteAttendanceRepository(BaseRepository):
 
     def get_logs_by_student(self, student_id: str) -> List[AttendanceLog]:
         """Возвращает историю посещений для конкретного студента."""
-        models = self.session.query(AttendanceModel).filter(
-            AttendanceModel.student_id == student_id
-        ).all()
+        models = (
+            self.session.query(AttendanceModel)
+            .filter(AttendanceModel.student_id == student_id)
+            .all()
+        )
         return [self._to_entity(m) for m in models]
 
     def get_all_logs(self) -> List[AttendanceLog]:
         """Возвращает все записи журнала."""
-        models = self.session.query(AttendanceModel).order_by(AttendanceModel.timestamp.desc()).all()
+        models = (
+            self.session.query(AttendanceModel)
+            .order_by(AttendanceModel.timestamp.desc())
+            .all()
+        )
         return [self._to_entity(m) for m in models]
 
     def _to_entity(self, model: AttendanceModel) -> AttendanceLog:
@@ -41,5 +47,5 @@ class SqliteAttendanceRepository(BaseRepository):
             student_id=model.student_id,
             timestamp=model.timestamp,
             is_late=model.is_late,
-            engagement_score=EngagementStatus(model.engagement_score)
+            engagement_score=EngagementStatus(model.engagement_score),
         )

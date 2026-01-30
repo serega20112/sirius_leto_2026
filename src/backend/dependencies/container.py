@@ -30,7 +30,7 @@ class Container:
         self.register_use_case = RegisterStudentUseCase(
             student_repo=self.student_repo,
             file_storage=self.storage,
-            face_recognizer=self.face_recognizer
+            face_recognizer=self.face_recognizer,
         )
 
         self.track_use_case = TrackAttendanceUseCase(
@@ -38,12 +38,11 @@ class Container:
             face_recognizer=self.face_recognizer,
             pose_estimator=self.pose_estimator,
             student_repo=self.student_repo,
-            attendance_repo=self.attendance_repo
+            attendance_repo=self.attendance_repo,
         )
 
         self.report_use_case = GetReportUseCase(
-            attendance_repo=self.attendance_repo,
-            student_repo=self.student_repo
+            attendance_repo=self.attendance_repo, student_repo=self.student_repo
         )
 
 

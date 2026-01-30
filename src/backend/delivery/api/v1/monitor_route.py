@@ -3,35 +3,53 @@ from flask import Blueprint, Response, jsonify
 from src.backend.dependencies.container import container
 from src.backend.utils.cv_tools import draw_overlays
 
-monitor_bp = Blueprint('monitor', __name__, url_prefix='/api/v1/monitor')
+monitor_bp = Blueprint("monitor", __name__, url_prefix="/api/v1/monitor")
 
 
 def generate_frames():
-    """Генератор видеопотока."""
+    """Генератор видеопотока с оптимизированным разрешением."""
     cap = cv2.VideoCapture(0)
 
-    while True:
-        success, frame = cap.read()
-        if not success:
-            break
-        result = container.track_use_case.execute(frame)
-        frame_with_overlay = draw_overlays(frame, result)
-        ret, buffer = cv2.imencode('.jpg', frame_with_overlay)
-        frame_bytes = buffer.tobytes()
+    # УСТАНОВКА РАЗРЕШЕНИЯ (Критично для FPS)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    # Попытка выжать максимум кадров из камеры
+    cap.set(cv2.CAP_PROP_FPS, 30)
 
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+    try:
+        while True:
+            success, frame = cap.read()
+            if not success:
+                break
+
+            # Обработка кадра
+            result = container.track_use_case.execute(frame)
+
+            # Отрисовка
+            frame_with_overlay = draw_overlays(frame, result)
+
+            # Сжатие (quality=70 уменьшит нагрузку на сеть и проц)
+            ret, buffer = cv2.imencode(
+                ".jpg", frame_with_overlay, [cv2.IMWRITE_JPEG_QUALITY, 70]
+            )
+            frame_bytes = buffer.tobytes()
+
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+            )
+    finally:
+        cap.release()  # Освобождаем камеру при закрытии стрима
 
 
-@monitor_bp.route('/video_feed')
+@monitor_bp.route("/video_feed")
 def video_feed():
-    """Эндпоинт для тега <img src="...">"""
-    return Response(generate_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(
+        generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame"
+    )
 
 
-@monitor_bp.route('/logs', methods=['GET'])
+@monitor_bp.route("/logs", methods=["GET"])
 def get_logs():
-    """JSON API с журналом посещаемости."""
     report = container.report_use_case.execute()
     return jsonify(report)
