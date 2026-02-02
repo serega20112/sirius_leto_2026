@@ -44,3 +44,43 @@ def video_feed():
 def get_logs():
     report = container.report_use_case.execute()
     return jsonify(report)
+
+
+@monitor_bp.route('/groups', methods=['GET'])
+def get_groups():
+    """Получить список учеников, сгруппированных по классам."""
+    students = container.student_repo.get_all()
+    groups = {}
+    for s in students:
+        if s.group_name not in groups:
+            groups[s.group_name] = []
+        groups[s.group_name].append({
+            "id": s.id,
+            "name": s.name,
+            "photo": f"/static/images/{s.id}.jpg"
+        })
+
+    for g in groups:
+        groups[g].sort(key=lambda x: x['name'])
+    return jsonify(groups)
+
+
+@monitor_bp.route('/manual_status', methods=['POST'])
+def manual_status():
+    """Ручное изменение статуса ученика через БД."""
+    data = request.json
+    student_id = data.get('student_id')
+    action = data.get('action')  # 'present' или 'absent'
+
+    from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
+    from datetime import datetime
+
+    log = AttendanceLog(
+        id=None,
+        student_id=student_id,
+        timestamp=datetime.now(),
+        is_late=False,
+        engagement_score=EngagementStatus.HIGH if action == 'present' else EngagementStatus.LOW
+    )
+    container.attendance_repo.add_log(log)
+    return jsonify({"status": "updated"})

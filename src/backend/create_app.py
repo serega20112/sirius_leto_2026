@@ -17,6 +17,14 @@ def create_app():
     app = Flask(
         __name__, template_folder=str(frontend_dir), static_folder=str(frontend_dir)
     )
+    app = Flask(__name__,
+                static_folder=str(frontend_dir / "static"),
+                static_url_path='/static')
+
+    # Добавь это, чтобы фото студентов были доступны по ссылке /static/images/...
+    @app.route('/static/images/<path:filename>')
+    def custom_static(filename):
+        return send_from_directory(str(backend_dir / "assets" / "images"), filename)
 
     CORS(app)
 
