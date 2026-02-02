@@ -8,27 +8,18 @@ monitor_bp = Blueprint("monitor", __name__, url_prefix="/api/v1/monitor")
 
 def generate_frames():
     """Генератор видеопотока с оптимизированным разрешением."""
-    cap = cv2.VideoCapture(0)
-
-    # УСТАНОВКА РАЗРЕШЕНИЯ (Критично для FPS)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    # Попытка выжать максимум кадров из камеры
-    cap.set(cv2.CAP_PROP_FPS, 30)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    # cap.set(cv2.CAP_PROP_FPS, 30)
 
     try:
         while True:
             success, frame = cap.read()
             if not success:
                 break
-
-            # Обработка кадра
             result = container.track_use_case.execute(frame)
-
-            # Отрисовка
             frame_with_overlay = draw_overlays(frame, result)
-
-            # Сжатие (quality=70 уменьшит нагрузку на сеть и проц)
             ret, buffer = cv2.imencode(
                 ".jpg", frame_with_overlay, [cv2.IMWRITE_JPEG_QUALITY, 70]
             )
@@ -39,7 +30,7 @@ def generate_frames():
                 b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
             )
     finally:
-        cap.release()  # Освобождаем камеру при закрытии стрима
+        cap.release()
 
 
 @monitor_bp.route("/video_feed")

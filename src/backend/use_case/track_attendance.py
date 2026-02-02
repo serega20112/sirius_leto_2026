@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
-from typing import Dict, Any
-
 from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
 
 
 class TrackAttendanceUseCase:
-    """Сценарий обработки видеокадра: детекция, распознавание, анализ вовлеченности."""
+    """Сценарий обработки кадров с кэшированием распознавания."""
 
     def __init__(
         self,
@@ -21,13 +19,12 @@ class TrackAttendanceUseCase:
         self.student_repo = student_repo
         self.attendance_repo = attendance_repo
 
-        # Кэш: {track_id: "Имя Студента"}
         self.identity_cache = {}
-        # Кэш: {track_id: datetime_last_db_log}
         self.log_cooldowns = {}
+        self.frame_count = 0
 
     def execute(self, frame):
-        # 1. Детекция и трекинг (GPU) - очень быстро
+        self.frame_count += 1
         tracked_people = self.person_detector.track_people(frame)
 
         final_results = []
@@ -36,10 +33,7 @@ class TrackAttendanceUseCase:
             bbox = person["bbox"]
             tid = person["track_id"]
 
-            # 2. РАСПОЗНАВАНИЕ (Тяжелая часть)
-            # Проверяем, знаем ли мы уже этого человека по его ID трека
-            if tid not in self.identity_cache:
-                # Вызываем DeepFace только ОДИН РАЗ для нового ID
+            if tid not in self.identity_cache or self.frame_count % 30 == 0:
                 x1, y1, x2, y2 = bbox
                 face_crop = frame[y1:y2, x1:x2]
 
@@ -49,17 +43,18 @@ class TrackAttendanceUseCase:
                         sid = filename.split(".")[0]
                         student = self.student_repo.find_by_id(sid)
                         name = student.name if student else "Unknown"
-                        self.identity_cache[tid] = name
-                        # Записываем в БД факт прихода
-                        self._log_to_db(sid)
+                        self.identity_cache[tid] = {"name": name, "sid": sid}
                     else:
-                        self.identity_cache[tid] = "Unknown"
+                        self.identity_cache[tid] = {"name": "Unknown", "sid": None}
 
-            student_name = self.identity_cache.get(tid, "Unknown")
+            cached = self.identity_cache.get(tid, {"name": "Unknown", "sid": None})
+            student_name = cached["name"]
+            student_id = cached["sid"]
 
-            # 3. ВОВЛЕЧЕННОСТЬ (GPU)
-            # Считаем на каждом кадре, так как твоя 5060 Ti это потянет
             engagement = self.pose_estimator.estimate_engagement(frame, bbox)
+
+            if student_id and student_id != "Unknown":
+                self._log_visit(student_id, engagement)
 
             final_results.append(
                 {
@@ -72,28 +67,31 @@ class TrackAttendanceUseCase:
 
         return {"students": final_results}
 
-    def _log_visit(self, student_id: str, engagement: str):
-        """Записывает лог, если прошло достаточно времени с последней записи."""
+    def _log_visit(self, student_id, engagement):
+        """Запись в базу данных с проверкой кулдауна."""
         now = datetime.now()
-        last_time = self._log_cache.get(student_id)
+        if student_id not in self.log_cooldowns or (
+            now - self.log_cooldowns[student_id]
+        ) > timedelta(minutes=1):
 
-        if last_time is None or (now - last_time) > self._LOG_COOLDOWN:
-            lesson_start = now.replace(hour=9, minute=0, second=0, microsecond=0)
-            is_late = now > lesson_start
-
-            status_enum = (
-                EngagementStatus(engagement)
-                if engagement in ["high", "medium", "low"]
-                else EngagementStatus.UNKNOWN
-            )
+            status_map = {
+                "high": EngagementStatus.HIGH,
+                "medium": EngagementStatus.MEDIUM,
+                "low": EngagementStatus.LOW,
+            }
+            status_enum = status_map.get(engagement, EngagementStatus.UNKNOWN)
 
             log = AttendanceLog(
                 id=None,
                 student_id=student_id,
                 timestamp=now,
-                is_late=is_late,
+                is_late=False,
                 engagement_score=status_enum,
             )
 
-            self.attendance_repo.add_log(log)
-            self._log_cache[student_id] = now
+            try:
+                self.attendance_repo.add_log(log)
+                self.log_cooldowns[student_id] = now
+                print(f"[DB] Запись для {student_id} добавлена.")
+            except Exception as e:
+                print(f"[DB] Ошибка: {e}")

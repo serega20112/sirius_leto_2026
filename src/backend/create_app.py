@@ -7,7 +7,7 @@ from src.backend.delivery.api.v1.auth_route import auth_bp
 from src.backend.delivery.api.v1.monitor_route import monitor_bp
 from src.backend.delivery.api.v1.index_route import (
     web_bp,
-)  # Твой новый файл для фронта
+)
 
 
 def create_app():

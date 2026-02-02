@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-
+from pathlib import Path
 from sqlalchemy import (
     create_engine,
     Column,
@@ -10,13 +10,13 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
 )
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import sessionmaker, DeclarativeBase, relationship
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DB_PATH = os.path.join(BASE_DIR, "assets/database/attendance.db")
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+DB_DIR = BACKEND_DIR / "assets" / "database"
+DB_PATH = DB_DIR / "attendance.db"
 
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+DB_DIR.mkdir(parents=True, exist_ok=True)
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
@@ -43,7 +43,6 @@ class StudentModel(Base):
     photo_path = Column(String)
     created_at = Column(DateTime, default=datetime.now)
 
-    # Связь с логами (опционально)
     logs = relationship("AttendanceModel", back_populates="student")
 
 

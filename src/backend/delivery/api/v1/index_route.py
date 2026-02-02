@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template
 
-# Создаем блюпринт без префикса /api, так как это главная страница
 web_bp = Blueprint("web", __name__)
 
 
