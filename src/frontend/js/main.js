@@ -1,120 +1,299 @@
 const API_BASE = "/api/v1";
-let engagementChart;
+const charts = {};
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
     updateClock();
     setInterval(updateClock, 1000);
-    loadInitialData();
-    initChart();
-    setInterval(() => { loadLogs(); }, 3000);
-});
+    setInterval(loadLiveEvents, 2000);
+    loadLiveEvents();
 
+    const tabEl = document.querySelector('a[href="#v-pills-groups"]');
+    if (tabEl) {
+        tabEl.addEventListener('click', loadGroups);
+    }
+
+    // Инициализация формы регистрации
+    initRegisterForm();
+}
+
+// Надёжно инициализируем — если документ ещё парсится, подпишемся, иначе вызовем сразу
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    // DOMContentLoaded уже произошёл — вызываем инициализацию сразу
+    initApp();
+}
+
+/**
+ * Обновляет часы в интерфейсе.
+ */
 function updateClock() {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-    document.getElementById('currentTime').innerText = new Date().toLocaleString('ru-RU', options);
+    const now = new Date();
+    const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    const el = document.getElementById("currentTime");
+    if (el) el.innerText = now.toLocaleString("ru-RU", options);
 }
 
-async function loadInitialData() {
-    await loadStudents();
-    await loadLogs();
-}
-
-async function loadStudents() {
+/**
+ * Загружает список живых событий (логи) для боковой панели мониторинга.
+ */
+async function loadLiveEvents() {
     try {
+        console.log("[FRONT] Запрос логов на", `${API_BASE}/monitor/logs`);
         const res = await fetch(`${API_BASE}/monitor/logs`);
+        console.log("[FRONT] Ответ /monitor/logs status=", res.status);
+        if (!res.ok) {
+            const text = await res.text().catch(()=>"(no body)");
+            console.warn("[FRONT] /monitor/logs вернул не-ok:", res.status, text);
+            return;
+        }
         const logs = await res.json();
-        const tbody = document.getElementById('studentTableBody');
+        console.log("[FRONT] /monitor/logs json:", Array.isArray(logs) ? `items=${logs.length}` : typeof logs, logs);
+        const container = document.getElementById("liveEvents");
+        if (!container) return;
 
-        const uniqueStudents = {};
-        logs.forEach(l => { uniqueStudents[l.student_name] = l; });
-
-        tbody.innerHTML = Object.values(uniqueStudents).map(s => `
-            <tr>
-                <td class="p-4">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px">
-                            ${s.student_name[0]}
-                        </div>
-                        <span class="fw-bold">${s.student_name}</span>
-                    </div>
-                </td>
-                <td><span class="text-secondary small">Группа</span></td>
-                <td>
-                    <span class="badge ${s.is_late ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'} px-3 py-2">
-                        ${s.is_late ? 'ОПОЗДАЛ' : 'ПРИСУТСТВУЕТ'}
-                    </span>
-                </td>
-                <td class="text-end p-4">
-                    <button class="btn btn-outline-secondary btn-sm me-2" onclick="manualUpdate('${s.student_name}', 'absent')">Покинул</button>
-                    <button class="btn btn-outline-primary btn-sm" onclick="manualUpdate('${s.student_name}', 'present')">Пришел</button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (e) {}
-}
-
-async function loadLogs() {
-    try {
-        const res = await fetch(`${API_BASE}/monitor/logs`);
-        const logs = await res.json();
-        const container = document.getElementById('liveLogs');
-
-        container.innerHTML = logs.slice(0, 15).map(l => `
-            <div class="list-group-item bg-transparent p-4 border-bottom border-secondary-subtle">
-                <div class="d-flex justify-content-between mb-1">
-                    <span class="fw-bold">${l.student_name}</span>
-                    <span class="text-secondary small">${new Date(l.timestamp).toLocaleTimeString()}</span>
+        container.innerHTML = logs.slice(0, 20).map(l => `
+            <div class="p-3 border-bottom border-secondary-subtle">
+                <div class="d-flex justify-content-between">
+                    <span class="fw-bold text-light">${l.student_name}</span>
+                    <span class="small text-secondary">${new Date(l.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mt-2">
-                    <span class="small status-${l.engagement}">Вовлеченность: ${l.engagement.toUpperCase()}</span>
-                    <span class="badge bg-darker border border-secondary small text-secondary">${l.is_late ? 'Опоздание' : 'Вовремя'}</span>
+                <div class="d-flex justify-content-between mt-1">
+                    <span class="badge ${l.is_late ? 'bg-danger' : 'bg-success'}">${l.is_late ? 'Опоздал' : 'Вовремя'}</span>
+                    <span class="small status-${l.engagement}">${l.engagement.toUpperCase()}</span>
                 </div>
             </div>
-        `).join('');
-
-        updateChartData(logs);
-    } catch (e) {}
+        `).join("");
+    } catch (e) {
+        console.error("[FRONT] Ошибка при загрузке логов:", e);
+    }
 }
 
-document.getElementById('registerForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = e.target.querySelector('button');
-    btn.disabled = true;
-
-    const formData = new FormData();
-    formData.append('name', document.getElementById('regName').value);
-    formData.append('group', document.getElementById('regGroup').value);
-    formData.append('photo', document.getElementById('regPhoto').files[0]);
-
+/**
+ * Загружает список групп и рендерит аккордеон с учениками.
+ */
+async function loadGroups() {
     try {
-        const res = await fetch(`${API_BASE}/auth/register`, { method: 'POST', body: formData });
-        if (res.ok) {
-            document.getElementById('regStatus').innerHTML = '<div class="alert alert-success border-0 py-3">Ученик успешно зарегистрирован</div>';
-            e.target.reset();
-            loadStudents();
-        }
-    } catch (err) {}
-    btn.disabled = false;
-};
+        const res = await fetch(`${API_BASE}/monitor/groups`);
+        const groups = await res.json();
+        const accordion = document.getElementById("groupsAccordion");
+        if (!accordion) return;
 
-function initChart() {
-    const ctx = document.getElementById('engagementChart').getContext('2d');
-    engagementChart = new Chart(ctx, {
+        accordion.innerHTML = "";
+
+        Object.keys(groups).forEach((groupName, index) => {
+            const students = groups[groupName];
+            const html = `
+                <div class="accordion-item bg-dark border-secondary">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#group-${index}">
+                            Группа ${groupName} <span class="badge bg-secondary ms-2">${students.length}</span>
+                        </button>
+                    </h2>
+                    <div id="group-${index}" class="accordion-collapse collapse" data-bs-parent="#groupsAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-3">
+                                ${students.map(s => renderStudentCard(s)).join("")}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            accordion.insertAdjacentHTML("beforeend", html);
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+/**
+ * Генерирует HTML карточки ученика.
+ */
+function renderStudentCard(student) {
+    return `
+        <div class="col-md-6 col-lg-4">
+            <div class="card bg-card border-secondary h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="${student.photo}" alt="Фото ${student.name}" class="rounded-circle me-3 student-avatar">
+                        <div>
+                            <h6 class="mb-0 text-white">${student.name}</h6>
+                            <small class="text-secondary">ID: ${student.id.substring(0, 8)}...</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="toggleDetails('${student.id}')">
+                        <i class="bi bi-graph-up"></i> Статистика
+                    </button>
+                    <div id="details-${student.id}" class="d-none mt-3 border-top border-secondary pt-3">
+                        <canvas id="chart-${student.id}" class="mb-3" height="100"></canvas>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-success flex-grow-1" onclick="updateStatus('${student.id}', 'present')">Пришел</button>
+                            <button class="btn btn-sm btn-danger flex-grow-1" onclick="updateStatus('${student.id}', 'absent')">Ушел</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Отправляет запрос на изменение статуса в БД.
+ */
+async function updateStatus(studentId, action) {
+    try {
+        await fetch(`${API_BASE}/monitor/manual_status`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                action: action
+            })
+        });
+        alert("Статус обновлен в базе данных");
+    } catch (e) {
+        alert("Ошибка соединения");
+    }
+}
+
+/**
+ * Раскрывает детали карточки и инициализирует график.
+ */
+function toggleDetails(id) {
+    const el = document.getElementById(`details-${id}`);
+    el.classList.toggle("d-none");
+    if (!el.classList.contains("d-none")) {
+        setTimeout(() => initStudentChart(id), 100);
+    }
+}
+
+/**
+ * Инициализирует график Chart.js для конкретного ученика.
+ */
+function initStudentChart(id) {
+    const ctx = document.getElementById(`chart-${id}`);
+    if (!ctx || charts[id]) return;
+
+    charts[id] = new Chart(ctx, {
         type: 'line',
-        data: { labels: [], datasets: [{ label: 'Уровень вовлеченности', data: [], borderColor: '#58a6ff', tension: 0.4, fill: true, backgroundColor: '#58a6ff11' }] },
-        options: { responsive: true, scales: { y: { min: 0, max: 2, ticks: { callback: v => ['Low', 'Medium', 'High'][v] } } } }
+        data: {
+            labels: ['10:00', '10:15', '10:30', '10:45', '11:00'],
+            datasets: [{
+                label: 'Вовлеченность',
+                data: [1, 2, 2, 1, 2],
+                borderColor: '#58a6ff',
+                backgroundColor: 'rgba(88, 166, 255, 0.2)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    display: false,
+                    min: 0,
+                    max: 2
+                },
+                x: {
+                    display: false
+                }
+            }
+        }
     });
 }
 
-function updateChartData(logs) {
-    if (!engagementChart) return;
-    const map = { 'low': 0, 'medium': 1, 'high': 2 };
-    const lastLogs = logs.slice(-10).reverse();
-    engagementChart.data.labels = lastLogs.map(l => new Date(l.timestamp).toLocaleTimeString());
-    engagementChart.data.datasets[0].data = lastLogs.map(l => map[l.engagement]);
-    engagementChart.update('none');
-}
+/**
+ * Обработка формы регистрации.
+ */
 
-function manualUpdate(name, action) {
-    alert(`Статус ученика ${name} изменен на: ${action === 'present' ? 'Присутствует' : 'Покинул'}`);
+function initRegisterForm() {
+    const regForm = document.getElementById("registerForm");
+
+    if (!regForm) {
+        console.error("Ошибка: Форма регистрации не найдена в HTML!");
+        return;
+    }
+
+    console.info("Инициализация формы регистрации: найден элемент registerForm");
+
+    // Используем addEventListener для надёжности и возможности нескольких обработчиков
+    regForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log("Регистрация: submit обработчик сработал"); // Проверка в консоли браузера
+
+        const btn = e.target.querySelector("button[type='submit']") || e.target.querySelector("button");
+        const statusDiv = document.getElementById("regStatus");
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = "Загрузка...";
+        }
+
+        const formData = new FormData();
+        const nameVal = document.getElementById("regName").value;
+        const groupVal = document.getElementById("regGroup").value;
+        const photoInput = document.getElementById("regPhoto");
+        const photoFile = photoInput && photoInput.files ? photoInput.files[0] : null;
+
+        if (!nameVal || !groupVal || !photoFile) {
+            alert("Заполните все поля!");
+            if (btn) btn.disabled = false;
+            if (btn) btn.innerHTML = "Добавить ученика";
+            return;
+        }
+
+        formData.append("name", nameVal);
+        formData.append("group", groupVal);
+        formData.append("photo", photoFile);
+
+        try {
+            console.log("Отправка формы /api/v1/auth/register", nameVal, groupVal, photoFile.name);
+            const res = await fetch("/api/v1/auth/register", {
+                method: "POST",
+                body: formData
+            });
+
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (parseErr) {
+                console.error("Не удалось распарсить JSON ответа", parseErr);
+            }
+
+            if (res.ok) {
+                alert("Ученик успешно добавлен! ID: " + (data ? data.id : "(нет id в ответе)"));
+                e.target.reset();
+                if (statusDiv) statusDiv.innerText = "Ученик добавлен";
+            } else {
+                const errMsg = data && data.error ? data.error : `HTTP ${res.status}`;
+                alert("Ошибка сервера: " + errMsg);
+                console.error("Ответ сервера:", res.status, data);
+                if (statusDiv) statusDiv.innerText = "Ошибка: " + errMsg;
+            }
+        } catch (err) {
+            alert("Ошибка сети (см. консоль)");
+            console.error("Network Error:", err);
+            if (statusDiv) statusDiv.innerText = "Ошибка сети";
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = "Добавить ученика";
+            }
+        }
+    });
 }

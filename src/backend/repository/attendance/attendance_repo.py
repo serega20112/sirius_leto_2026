@@ -52,6 +52,9 @@ class SqliteAttendanceRepository(BaseRepository):
 
     def get_stats_by_student(self, student_id: str) -> List[AttendanceModel]:
         """Получить все логи конкретного студента для графика."""
-        return self.session.query(AttendanceModel).filter(
-            AttendanceModel.student_id == student_id
-        ).order_by(AttendanceModel.timestamp.asc()).all()
+        return (
+            self.session.query(AttendanceModel)
+            .filter(AttendanceModel.student_id == student_id)
+            .order_by(AttendanceModel.timestamp.asc())
+            .all()
+        )
