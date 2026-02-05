@@ -1,0 +1,26 @@
+{% extends "index.html" %}
+{% block content %}
+<div class="col-md-6 offset-md-3">
+    <div class="card shadow p-4">
+        <h4 class="mb-4 text-center">Регистрация в систему</h4>
+        <form id="registerForm" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="regName" class="form-label">ФИО Ученика</label>
+                <input type="text" id="regName" name="name" class="form-control" placeholder="Напр: Иванов Иван" required>
+            </div>
+            <div class="mb-3">
+                <label for="regGroup" class="form-label">Группа (Класс)</label>
+                <input type="text" id="regGroup" name="group" class="form-control" placeholder="Напр: Е-21" required>
+            </div>
+            <div class="mb-3">
+                <label for="regPhoto" class="form-label">Фотография (Эталон)</label>
+                <input type="file" id="regPhoto" name="photo" class="form-control" accept="image/*" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2">Добавить ученика</button>
+        </form>
+    </div>
+    <div id="regStatus" class="mt-3"></div>
+</div>
+<script src="/static/js/register.js"></script>
+<link rel="stylesheet" href="/static/css/register.css">
+{% endblock %}

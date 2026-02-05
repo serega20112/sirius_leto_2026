@@ -20,7 +20,7 @@ print("="*70 + "\n")
 # Проверка статических файлов
 tests = [
     ('GET / (главная)', '/'),
-    ('GET /js/main.js', '/js/main.js'),
+    ('GET /js/base.js', '/js/base.js'),
     ('GET /static/static.css', '/static/static.css'),
 ]
 

@@ -32,7 +32,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(monitor_bp)
 
-    @app.route("/static/images/<path:filename>")
+    @app.route("/src/assets/images/<path:filename>")
     def serve_student_photos(filename):
         return send_from_directory(str(images_dir), filename)
 

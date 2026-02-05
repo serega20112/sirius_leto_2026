@@ -45,42 +45,8 @@ def video_feed():
 
 @monitor_bp.route("/logs", methods=["GET"])
 def get_logs():
-    # Диагностика: логируем вызов эндпоинта и источник запроса
-    print(f"[MONITOR] GET /api/v1/monitor/logs called from {request.remote_addr} method={request.method}")
-    try:
-        report = container.report_use_case.execute()
-        if report is None:
-            print("[MONITOR] report_use_case.execute() вернул None, возвращаю пустой список")
-            return jsonify([])
-
-        # Если report содержит объекты, не сериализуемые напрямую, попробуем привести к простому виду
-        try:
-            return jsonify(report)
-        except Exception as ser_exc:
-            print(f"[MONITOR] Ошибка сериализации ответа: {ser_exc}. Попытка привести в список словарей.")
-            # Попытка трансформировать итерацию объектов в словари (без предположений об атрибутах)
-            try:
-                safe = []
-                for item in report:
-                    if isinstance(item, dict):
-                        safe.append(item)
-                    else:
-                        # берём атрибуты доступные через __dict__ как fallback
-                        attrs = getattr(item, "__dict__", None)
-                        if attrs:
-                            safe.append({k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in attrs.items()})
-                        else:
-                            safe.append(str(item))
-                return jsonify(safe)
-            except Exception as convert_exc:
-                print(f"[MONITOR] Не удалось привести отчет в JSON: {convert_exc}")
-                return jsonify({"error": "Failed to serialize report", "debug": str(convert_exc)}), 500
-    except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-        print(f"[MONITOR] Ошибка при получении логов: {e}")
-        return jsonify({"error": str(e)}), 500
+    report = container.report_use_case.execute()
+    return jsonify(report)
 
 
 @monitor_bp.route("/groups", methods=["GET"])
@@ -101,14 +67,7 @@ def get_groups():
 
 @monitor_bp.route("/manual_status", methods=["POST"])
 def manual_status():
-    # добавлен лог для диагностики входящих данных
-    try:
-        data = request.get_json(force=False, silent=True) or request.json or {}
-    except Exception:
-        data = request.json or {}
-
-    print(f"[MONITOR] POST /api/v1/monitor/manual_status payload from {request.remote_addr}: {data}")
-
+    data = request.json
     student_id = data.get("student_id")
     action = data.get("action")
 
@@ -125,5 +84,4 @@ def manual_status():
         ),
     )
     container.attendance_repo.add_log(log)
-    print(f"[MONITOR] Добавлен лог вручную для student_id={student_id} action={action}")
     return jsonify({"status": "updated"})

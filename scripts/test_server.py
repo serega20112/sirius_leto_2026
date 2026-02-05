@@ -16,8 +16,8 @@ r = client.get('/')
 print(r.status_code, r.content_type)
 print(r.data[:200].decode('utf-8', errors='ignore'))
 
-print('\nGET /static/js/main.js')
-r = client.get('/static/js/main.js')
+print('\nGET /static/js/base.js')
+r = client.get('/static/js/base.js')
 print(r.status_code, r.content_type, 'len=', len(r.data))
 print(r.data[:200].decode('utf-8', errors='ignore'))
 
