@@ -1,9 +1,11 @@
 import cv2
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, request, render_template
 from src.backend.dependencies.container import container
 from src.backend.utils.cv_tools import draw_overlays
+from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
+from datetime import datetime
 
-monitor_bp = Blueprint("monitor", __name__, url_prefix="/api/v1/monitor")
+monitor_bp = Blueprint("monitor", __name__)
 
 
 def generate_frames():
@@ -53,16 +55,16 @@ def get_logs():
 def get_groups():
     students = container.student_repo.get_all()
     groups = {}
+
     for s in students:
-        if s.group_name not in groups:
-            groups[s.group_name] = []
-        groups[s.group_name].append(
-            {"id": s.id, "name": s.name, "photo": f"/static/images/{s.id}.jpg"}
+        groups.setdefault(s.group_name, []).append(
+            {"id": s.id, "name": s.name, "photo": f"/src/assets/images/{s.id}.jpg"}
         )
 
     for g in groups:
         groups[g].sort(key=lambda x: x["name"])
-    return jsonify(groups)
+
+    return render_template("groups.html", groups=groups)
 
 
 @monitor_bp.route("/manual_status", methods=["POST"])
@@ -70,9 +72,6 @@ def manual_status():
     data = request.json
     student_id = data.get("student_id")
     action = data.get("action")
-
-    from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
-    from datetime import datetime
 
     log = AttendanceLog(
         id=None,

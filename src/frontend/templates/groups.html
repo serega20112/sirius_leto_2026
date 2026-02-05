@@ -1,10 +1,55 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "index.html" %}
 
-</body>
-</html>
+{% block content %}
+<h3 class="mb-4">Управление группами</h3>
+
+<div class="accordion shadow" id="groupsAccordion">
+    {% for group, students in groups.items() %}
+    <div class="accordion-item bg-dark border-secondary mb-2">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-white" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#group-{{ loop.index }}">
+                Группа {{ group }} <span class="badge bg-secondary ms-2">{{ students|length }}</span>
+            </button>
+        </h2>
+        <div id="group-{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#groupsAccordion">
+            <div class="accordion-body">
+                <div class="row g-3">
+                    {% for s in students %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-card border-secondary h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="avatar-wrapper me-3">
+                                        <img src="{{ s.photo }}" alt="Фото {{ s.name }}" class="student-avatar">
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-white">{{ s.name }}</h6>
+                                        <small class="text-secondary">ID: {{ s.id[:8] }}...</small>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="toggleDetails('{{ s.id }}')">
+                                    <i class="bi bi-graph-up"></i> Статистика
+                                </button>
+                                <div id="details-{{ s.id }}" class="d-none mt-3 border-top border-secondary pt-3">
+                                    <canvas id="chart-{{ s.id }}" class="mb-3" height="100"></canvas>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-success flex-grow-1" onclick="updateStatus('{{ s.id }}', 'present')">Пришел</button>
+                                        <button class="btn btn-sm btn-danger flex-grow-1" onclick="updateStatus('{{ s.id }}', 'absent')">Ушел</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<link rel="stylesheet" href="/static/css/groups.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/groups.js"></script>
+{% endblock %}

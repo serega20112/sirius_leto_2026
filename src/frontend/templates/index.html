@@ -3,26 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <title>Панель Преподавателя | AI School</title>
+
+    <!-- Bootstrap CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="/static/css/base.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Локальные стили через Flask static -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
 </head>
 <body>
+
 <div class="container-fluid">
     <div class="row">
-        <!-- Боковая панель -->
+
         <nav class="col-md-2 d-none d-md-block sidebar shadow">
             <div class="position-sticky pt-3">
                 <div class="px-3 mb-4">
                     <h5 class="text-primary fw-bold">AI ШКОЛА</h5>
-                    <p class="small text-secondary">Панель Учителя</p>
+                    <p class="small text-secondary">Панель учителя</p>
                 </div>
+
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link" href="/">Мониторинг</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/students_and_groups">Группы и Ученики</a>
+                        <a class="nav-link" href="/groups">Группы и ученики</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/register">Регистрация</a>
@@ -30,13 +36,19 @@
                 </ul>
             </div>
         </nav>
+
         <main class="col-md-10 ms-sm-auto px-md-4 py-4">
             {% block content %}{% endblock %}
         </main>
+
     </div>
 </div>
+
+<!-- Bootstrap JS Bundle CDN -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="/static/js/base.js"></script>
+
+<!-- Локальные скрипты через Flask static -->
+<script src="{{ url_for('static', filename='js/base.js') }}"></script>
+
 </body>
 </html>

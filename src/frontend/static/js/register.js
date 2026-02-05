@@ -4,18 +4,18 @@ function initRegisterForm() {
 
     regForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = e.target.querySelector("button[type='submit']");
+        const btn = regForm.querySelector("button[type='submit']");
         const statusDiv = document.getElementById("regStatus");
-        if (btn) { btn.disabled = true; btn.innerHTML = "Загрузка..."; }
+
+        if (btn) { btn.disabled = true; btn.innerText = "Загрузка..."; }
 
         const nameVal = document.getElementById("regName").value;
         const groupVal = document.getElementById("regGroup").value;
-        const photoInput = document.getElementById("regPhoto");
-        const photoFile = photoInput?.files?.[0];
+        const photoFile = document.getElementById("regPhoto")?.files?.[0];
 
         if (!nameVal || !groupVal || !photoFile) {
             alert("Заполните все поля!");
-            if (btn) { btn.disabled = false; btn.innerHTML = "Добавить ученика"; }
+            if (btn) { btn.disabled = false; btn.innerText = "Добавить ученика"; }
             return;
         }
 
@@ -26,12 +26,21 @@ function initRegisterForm() {
 
         try {
             const res = await fetch("/api/v1/auth/register", { method: "POST", body: formData });
-            const data = await res.json().catch(()=>null);
+            const data = await res.json().catch(() => null);
 
             if (res.ok) {
-                alert("Ученик успешно добавлен! ID: " + (data?.id || "(нет id)"));
-                e.target.reset();
-                if (statusDiv) statusDiv.innerText = "Ученик добавлен";
+                // заполняем модалку
+                document.getElementById("modalBody").innerHTML = `
+                    <p><strong>Имя:</strong> ${data.name}</p>
+                    <p><strong>Группа:</strong> ${data.group}</p>
+                    <p><strong>Фото:</strong><br>
+                       <img src="/static/images/${data.photo}" class="img-fluid" alt="Фото"></p>
+                `;
+                const modal = new bootstrap.Modal(document.getElementById('successModal'));
+                modal.show();
+
+                regForm.reset();
+                if (statusDiv) statusDiv.innerText = "Ученик успешно добавлен";
             } else {
                 const errMsg = data?.error || `HTTP ${res.status}`;
                 alert("Ошибка сервера: " + errMsg);
@@ -41,11 +50,9 @@ function initRegisterForm() {
             alert("Ошибка сети");
             if (statusDiv) statusDiv.innerText = "Ошибка сети";
         } finally {
-            if (btn) { btn.disabled = false; btn.innerHTML = "Добавить ученика"; }
+            if (btn) { btn.disabled = false; btn.innerText = "Добавить ученика"; }
         }
     });
 }
 
-if (document.getElementById("registerForm")) {
-    document.addEventListener('DOMContentLoaded', initRegisterForm);
-}
+document.addEventListener('DOMContentLoaded', initRegisterForm);
