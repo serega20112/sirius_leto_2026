@@ -26,9 +26,8 @@ function updateClock() {
 }
 
 async function loadLiveEvents() {
-    const API_BASE = "/api/v1";
     try {
-        const res = await fetch(`${API_BASE}/monitor/logs`);
+        const res = await fetch(`/logs`);
         if (!res.ok) return;
         const logs = await res.json();
         const container = document.getElementById("liveEvents");

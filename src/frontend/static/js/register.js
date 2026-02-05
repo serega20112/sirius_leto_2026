@@ -25,7 +25,7 @@ function initRegisterForm() {
         formData.append("photo", photoFile);
 
         try {
-            const res = await fetch("/api/v1/auth/register", { method: "POST", body: formData });
+            const res = await fetch("/register", { method: "POST", body: formData });
             const data = await res.json().catch(() => null);
 
             if (res.ok) {
@@ -34,7 +34,7 @@ function initRegisterForm() {
                     <p><strong>Имя:</strong> ${data.name}</p>
                     <p><strong>Группа:</strong> ${data.group}</p>
                     <p><strong>Фото:</strong><br>
-                       <img src="/static/images/${data.photo}" class="img-fluid" alt="Фото"></p>
+                    <img src="/src/assets/images/${data.photo}" class="img-fluid" alt="Фото">
                 `;
                 const modal = new bootstrap.Modal(document.getElementById('successModal'));
                 modal.show();
