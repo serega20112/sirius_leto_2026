@@ -9,30 +9,37 @@ monitor_bp = Blueprint("monitor", __name__)
 
 
 def generate_frames():
-    """Генератор видеопотока. БЕЗ cap.set для стабильности."""
+    """Генератор видеопотока с обработкой ошибок."""
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+    if not cap.isOpened():
+        raise RuntimeError("Не удалось открыть камеру")
+
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FPS, 20)
 
     try:
         while True:
             success, frame = cap.read()
             if not success:
-                break
+                continue  # пропускаем кадр, если не получилось прочитать
+
             frame = cv2.resize(frame, (640, 480))
+
             try:
                 result = container.track_use_case.execute(frame)
-                frame_with_overlay = draw_overlays(frame, result)
+                frame = draw_overlays(frame, result)
             except Exception as e:
-                print(f"[ERROR] Ошибка в трекинге: {e}")
-                frame_with_overlay = frame
+                print(f"[ERROR] Трекинг не сработал: {e}")
 
-            ret, buffer = cv2.imencode(
-                ".jpg", frame_with_overlay, [cv2.IMWRITE_JPEG_QUALITY, 70]
-            )
-            frame_bytes = buffer.tobytes()
+            ret, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            if not ret:
+                continue
 
             yield (
                 b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
             )
     finally:
         cap.release()

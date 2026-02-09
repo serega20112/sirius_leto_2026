@@ -1,8 +1,8 @@
 function initBaseApp() {
     updateClock();
     setInterval(updateClock, 1000);
-    setInterval(loadLiveEvents, 2000);
-    loadLiveEvents();
+    setInterval(loadAttendance, 2000);
+    loadAttendance();
 }
 
 if (document.readyState === 'loading') {
@@ -25,26 +25,34 @@ function updateClock() {
     if (el) el.innerText = now.toLocaleString("ru-RU", options);
 }
 
-async function loadLiveEvents() {
+async function loadAttendance() {
     try {
         const res = await fetch(`/logs`);
         if (!res.ok) return;
         const logs = await res.json();
-        const container = document.getElementById("liveEvents");
+        const container = document.getElementById("attendanceChart");
         if (!container) return;
-        container.innerHTML = logs.slice(0, 20).map(l => `
-            <div class="p-3 border-bottom border-secondary-subtle">
-                <div class="d-flex justify-content-between">
-                    <span class="fw-bold text-light">${l.student_name}</span>
-                    <span class="small text-secondary">${new Date(l.timestamp).toLocaleTimeString()}</span>
+
+        // Сортируем по времени (последние события сверху)
+        logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        container.innerHTML = logs.slice(0, 20).map(log => {
+            const statusClass = log.status === "present" ? "bg-success" : "bg-danger";
+            const engagementClass = `status-${log.engagement.toLowerCase()}`;
+
+            return `
+                <div class="p-3 border-bottom border-secondary-subtle d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-light">${log.student_name}</span>
+                    <div class="d-flex gap-2">
+                        <span class="badge ${statusClass}">${log.status === "present" ? "Пришел" : "Ушел"}</span>
+                        <span class="small ${engagementClass}">${log.engagement.toUpperCase()}</span>
+                        <span class="small text-secondary">${new Date(log.timestamp).toLocaleTimeString()}</span>
+                    </div>
                 </div>
-                <div class="d-flex justify-content-between mt-1">
-                    <span class="badge ${l.is_late ? 'bg-danger' : 'bg-success'}">${l.is_late ? 'Опоздал' : 'Вовремя'}</span>
-                    <span class="small status-${l.engagement}">${l.engagement.toUpperCase()}</span>
-                </div>
-            </div>
-        `).join("");
+            `;
+        }).join("");
+
     } catch (e) {
-        console.error(e);
+        console.error("Ошибка загрузки данных присутствия", e);
     }
 }
