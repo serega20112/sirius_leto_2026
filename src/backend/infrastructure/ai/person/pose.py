@@ -10,7 +10,6 @@ class PoseEstimator:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(self.device)
 
-        # 3D точки (без изменений)
         self.model_points = np.array(
             [
                 (0.0, 0.0, 0.0),
@@ -32,7 +31,6 @@ class PoseEstimator:
         if face_roi.size == 0:
             return "unknown"
 
-        # Указываем девайс GPU
         results = self.model(face_roi, verbose=False, conf=0.5, device=self.device)[0]
 
         if results.keypoints is None or len(results.keypoints.xy) == 0:

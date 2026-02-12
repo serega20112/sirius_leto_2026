@@ -25,20 +25,46 @@ class TrackAttendanceUseCase:
 
     def execute(self, frame):
         self.frame_count += 1
-        tracked_people = self.person_detector.track_people(frame)
+        tracked_people = []
+        try:
+            if self.person_detector:
+                tracked_people = self.person_detector.track_people(frame)
+        except Exception as e:
+            print(f"[Track] person_detector error: {e}")
+
+        print(f"[Track] frame {self.frame_count} - tracked_people: {len(tracked_people)}")
 
         final_results = []
+        h, w = frame.shape[:2]
 
         for person in tracked_people:
-            bbox = person["bbox"]
-            tid = person["track_id"]
+            raw_bbox = person.get("bbox")
+            tid = person.get("track_id")
+
+            try:
+                x1, y1, x2, y2 = map(int, raw_bbox)
+            except Exception:
+                continue
+
+            x1 = max(0, min(x1, w - 1))
+            x2 = max(0, min(x2, w - 1))
+            y1 = max(0, min(y1, h - 1))
+            y2 = max(0, min(y2, h - 1))
+
+            bbox = [x1, y1, x2, y2]
 
             if tid not in self.identity_cache or self.frame_count % 30 == 0:
-                x1, y1, x2, y2 = bbox
-                face_crop = frame[y1:y2, x1:x2]
+                face_crop = None
+                if x2 > x1 and y2 > y1:
+                    face_crop = frame[y1:y2, x1:x2]
 
-                if face_crop.size > 0:
-                    filename = self.face_recognizer.recognize(face_crop)
+                if face_crop is not None and getattr(face_crop, 'size', 0) > 0:
+                    try:
+                        filename = self.face_recognizer.recognize(face_crop)
+                    except Exception as e:
+                        print(f"[Track] face recognition error: {e}")
+                        filename = None
+                    print(f"[Track] recognition filename: {filename}")
                     if filename:
                         sid = filename.split(".")[0]
                         student = self.student_repo.find_by_id(sid)
@@ -51,7 +77,13 @@ class TrackAttendanceUseCase:
             student_name = cached["name"]
             student_id = cached["sid"]
 
-            engagement = self.pose_estimator.estimate_engagement(frame, bbox)
+            engagement = "unknown"
+            try:
+                if self.pose_estimator:
+                    engagement = self.pose_estimator.estimate_engagement(frame, bbox)
+            except Exception as e:
+                print(f"[Track] pose estimator error: {e}")
+            print(f"[Track] track_id {tid} - name: {student_name} - engagement: {engagement}")
 
             if student_id and student_id != "Unknown":
                 self._log_visit(student_id, engagement)

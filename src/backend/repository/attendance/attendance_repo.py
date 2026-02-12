@@ -50,11 +50,12 @@ class SqliteAttendanceRepository(BaseRepository):
             engagement_score=EngagementStatus(model.engagement_score),
         )
 
-    def get_stats_by_student(self, student_id: str) -> List[AttendanceModel]:
+    def get_stats_by_student(self, student_id: str) -> List[AttendanceLog]:
         """Получить все логи конкретного студента для графика."""
-        return (
+        models = (
             self.session.query(AttendanceModel)
             .filter(AttendanceModel.student_id == student_id)
             .order_by(AttendanceModel.timestamp.asc())
             .all()
         )
+        return [self._to_entity(m) for m in models]
