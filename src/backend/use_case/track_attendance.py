@@ -32,7 +32,9 @@ class TrackAttendanceUseCase:
         except Exception as e:
             print(f"[Track] person_detector error: {e}")
 
-        print(f"[Track] frame {self.frame_count} - tracked_people: {len(tracked_people)}")
+        print(
+            f"[Track] frame {self.frame_count} - tracked_people: {len(tracked_people)}"
+        )
 
         final_results = []
         h, w = frame.shape[:2]
@@ -58,7 +60,7 @@ class TrackAttendanceUseCase:
                 if x2 > x1 and y2 > y1:
                     face_crop = frame[y1:y2, x1:x2]
 
-                if face_crop is not None and getattr(face_crop, 'size', 0) > 0:
+                if face_crop is not None and getattr(face_crop, "size", 0) > 0:
                     try:
                         filename = self.face_recognizer.recognize(face_crop)
                     except Exception as e:
@@ -83,7 +85,9 @@ class TrackAttendanceUseCase:
                     engagement = self.pose_estimator.estimate_engagement(frame, bbox)
             except Exception as e:
                 print(f"[Track] pose estimator error: {e}")
-            print(f"[Track] track_id {tid} - name: {student_name} - engagement: {engagement}")
+            print(
+                f"[Track] track_id {tid} - name: {student_name} - engagement: {engagement}"
+            )
 
             if student_id and student_id != "Unknown":
                 self._log_visit(student_id, engagement)

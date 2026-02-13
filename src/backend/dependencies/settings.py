@@ -15,6 +15,7 @@ class Settings:
     YOLO_MODEL_PATH = str(ASSETS_DIR / "models" / "yolov8n.pt")
     DB_PATH = ASSETS_DIR / "database" / "attendance.db"
 
-    CAMERA_SOURCE = os.getenv('CAMERA_SOURCE', 0)
+    CAMERA_SOURCE = os.getenv("CAMERA_SOURCE", 0)
+
 
 settings = Settings()

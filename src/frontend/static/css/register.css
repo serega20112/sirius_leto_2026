@@ -1,20 +1,20 @@
 .form-control:focus {
-    box-shadow: none;
-    border-color: var(--text-primary);
+  box-shadow: none;
+  border-color: var(--text-primary);
 }
 
 .btn-primary {
-    background-color: var(--text-primary);
-    border-color: var(--text-primary);
+  background-color: var(--text-primary);
+  border-color: var(--text-primary);
 }
 
 .btn-primary:hover {
-    background-color: #3f8ae0;
-    border-color: #3f8ae0;
+  background-color: #3f8ae0;
+  border-color: #3f8ae0;
 }
 
 #regStatus {
-    font-weight: bold;
-    margin-top: 10px;
-    color: var(--text-primary);
+  font-weight: bold;
+  margin-top: 10px;
+  color: var(--text-primary);
 }

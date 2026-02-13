@@ -21,12 +21,18 @@ class SqliteStudentRepository(BaseRepository):
 
     def find_by_id(self, student_id: str) -> Student | None:
         """Находит студента по уникальному ID."""
-        model = self.session.query(StudentModel).filter(StudentModel.id == student_id).first()
+        model = (
+            self.session.query(StudentModel)
+            .filter(StudentModel.id == student_id)
+            .first()
+        )
         return self._to_entity(model) if model else None
 
     def find_by_name(self, name: str) -> Student | None:
         """Находит студента по имени."""
-        model = self.session.query(StudentModel).filter(StudentModel.name == name).first()
+        model = (
+            self.session.query(StudentModel).filter(StudentModel.name == name).first()
+        )
         return self._to_entity(model) if model else None
 
     def get_all(self) -> List[Student]:
@@ -41,11 +47,13 @@ class SqliteStudentRepository(BaseRepository):
         """
         groups = {}
         for student in self.get_all():
-            groups.setdefault(student.group_name, []).append({
-                "id": student.id,
-                "name": student.name,
-                "photo": f"/src/assets/images/{student.id}.jpg"
-            })
+            groups.setdefault(student.group_name, []).append(
+                {
+                    "id": student.id,
+                    "name": student.name,
+                    "photo": f"/src/assets/images/{student.id}.jpg",
+                }
+            )
         for group in groups.values():
             group.sort(key=lambda x: x["name"])
         return groups

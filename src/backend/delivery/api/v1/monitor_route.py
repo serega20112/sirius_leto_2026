@@ -9,8 +9,7 @@ service = get_monitor_service()
 @monitor_bp.route("/video_feed")
 def video_feed():
     return Response(
-        service.stream_video(),
-        mimetype="multipart/x-mixed-replace; boundary=frame"
+        service.stream_video(), mimetype="multipart/x-mixed-replace; boundary=frame"
     )
 
 

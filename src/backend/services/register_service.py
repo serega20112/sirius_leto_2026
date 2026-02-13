@@ -28,5 +28,5 @@ class RegisterService:
             "id": student.id,
             "name": student.name,
             "group": student.group_name,
-            "photo": f"{student.id}.jpg"
+            "photo": f"{student.id}.jpg",
         }

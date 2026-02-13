@@ -1,5 +1,7 @@
 from src.backend.domain.student.entity import Student
 from src.backend.repository import SqliteStudentRepository, BaseRepository
+
+
 class StudentDependencies:
     """Содержит все зависимости для работы со студентами."""
 

@@ -1,112 +1,136 @@
 :root {
-    --bg-darker: #0d1117;
-    --bg-card: #161b22;
-    --border-color: #30363d;
-    --text-primary: #58a6ff;
-    --text-muted: #8b949e;
+  --bg-darker: #0d1117;
+  --bg-card: #161b22;
+  --border-color: #30363d;
+  --text-primary: #58a6ff;
+  --text-muted: #8b949e;
 }
 
 body {
-    background-color: var(--bg-darker);
-    color: #c9d1d9;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    overflow-x: hidden;
-    margin: 0;
+  background-color: var(--bg-darker);
+  color: #c9d1d9;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+  margin: 0;
 }
 
 /* Ссылки в навигации */
 a.nav-link {
-    color: var(--text-muted);
-    transition: color 0.2s;
+  color: var(--text-muted);
+  transition: color 0.2s;
 }
-a.nav-link:hover, .sidebar .nav-link.active {
-    color: var(--text-primary);
-    font-weight: bold;
+a.nav-link:hover,
+.sidebar .nav-link.active {
+  color: var(--text-primary);
+  font-weight: bold;
 }
 
 /* Сайдбар фиксированный */
 .sidebar {
-    background-color: var(--bg-card);
-    border-right: 1px solid var(--border-color);
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    padding-top: 1rem;
-    overflow-y: auto;
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding-top: 1rem;
+  overflow-y: auto;
 }
 
 /* Основной контент справа от сайдбара */
 .main {
-    margin-left: 16.6667%; /* ширина col-md-2 */
-    padding: 2rem 1.5rem;
+  margin-left: 16.6667%; /* ширина col-md-2 */
+  padding: 2rem 1.5rem;
 }
 
 /* Видеопоток */
 .video-container {
-    width: 100%;
-    max-width: 1000px; /* можно увеличить */
-    margin: 0 auto 2rem auto;
+  width: 100%;
+  max-width: 1000px; /* можно увеличить */
+  margin: 0 auto 2rem auto;
 }
 #videoStream {
-    width: 100%;
-    height: auto;
-    max-height: 600px;
-    object-fit: cover;
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
+  width: 100%;
+  height: auto;
+  max-height: 600px;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
 }
 
 /* Карточки */
 .card {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
 }
 .card-header {
-    background-color: transparent;
-    border-bottom: 1px solid var(--border-color);
+  background-color: transparent;
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* Скролл */
 .scroll-area {
-    max-height: 600px;
-    overflow-y: auto;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 /* Анимация */
 .pulse {
-    animation: pulse-red 2s infinite;
+  animation: pulse-red 2s infinite;
 }
 @keyframes pulse-red {
-    0% { opacity: 1; }
-    50% { opacity: 0.4; }
-    100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Статусы */
-.status-high { color: #3fb950; font-weight: bold; }
-.status-medium { color: #d29922; font-weight: bold; }
-.status-low { color: #f85149; font-weight: bold; }
+.status-high {
+  color: #3fb950;
+  font-weight: bold;
+}
+.status-medium {
+  color: #d29922;
+  font-weight: bold;
+}
+.status-low {
+  color: #f85149;
+  font-weight: bold;
+}
 
 /* Стили скроллбара */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-darker); }
-::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-darker);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
 
 /* Адаптив */
 @media (max-width: 767.98px) {
-    .sidebar {
-        position: relative;
-        height: auto;
-        width: 100%;
-    }
-    .main {
-        margin-left: 0;
-        padding: 1rem;
-    }
-    .video-container {
-        max-width: 100%;
-    }
+  .sidebar {
+    position: relative;
+    height: auto;
+    width: 100%;
+  }
+  .main {
+    margin-left: 0;
+    padding: 1rem;
+  }
+  .video-container {
+    max-width: 100%;
+  }
 }

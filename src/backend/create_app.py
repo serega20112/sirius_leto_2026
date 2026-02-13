@@ -49,7 +49,7 @@ def create_app():
         min_side = min(h, w)
         start_x = (w - min_side) // 2
         start_y = (h - min_side) // 2
-        img_cropped = img[start_y:start_y + min_side, start_x:start_x + min_side]
+        img_cropped = img[start_y : start_y + min_side, start_x : start_x + min_side]
 
         # масштабируем до 40x40
         img_resized = cv2.resize(img_cropped, (40, 40), interpolation=cv2.INTER_AREA)
@@ -60,9 +60,7 @@ def create_app():
             abort(500)
 
         return send_file(
-            BytesIO(buffer.tobytes()),
-            mimetype="image/jpeg",
-            download_name=filename
+            BytesIO(buffer.tobytes()), mimetype="image/jpeg", download_name=filename
         )
 
     return app

@@ -21,7 +21,11 @@ class PersonDetector:
 
         output = []
         try:
-            if results and len(results) > 0 and getattr(results[0].boxes, 'id', None) is not None:
+            if (
+                results
+                and len(results) > 0
+                and getattr(results[0].boxes, "id", None) is not None
+            ):
                 boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
                 ids = results[0].boxes.id.cpu().numpy().astype(int)
                 for box, track_id in zip(boxes, ids):

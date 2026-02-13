@@ -13,7 +13,9 @@ from src.backend.infrastructure.ai.face.recognizer import FaceRecognizer
 from src.backend.dependencies import settings
 
 from src.backend.infrastructure.ai.person.detector import PersonDetector
-from src.backend.infrastructure.ai.person.pose import PoseEstimator as PersonPoseEstimator
+from src.backend.infrastructure.ai.person.pose import (
+    PoseEstimator as PersonPoseEstimator,
+)
 
 
 class Container:
@@ -25,28 +27,42 @@ class Container:
         self.attendance_service = AttendanceService(self.attendance_repo)
         self.file_storage = LocalFileStorage(str(settings.IMAGES_DIR))
         self.face_recognizer = FaceRecognizer(str(settings.IMAGES_DIR))
-        self.register_use_case = RegisterStudentUseCase(self.student_repo, self.file_storage, self.face_recognizer)
+        self.register_use_case = RegisterStudentUseCase(
+            self.student_repo, self.file_storage, self.face_recognizer
+        )
         self.register_service = RegisterService(self.register_use_case)
-        self.get_report_use_case = GetReportUseCase(self.attendance_repo, self.student_repo)
+        self.get_report_use_case = GetReportUseCase(
+            self.attendance_repo, self.student_repo
+        )
 
         # Инициализация детектора и pose estimator
         try:
             self.person_detector = PersonDetector(settings.YOLO_MODEL_PATH)
-            print('[Container] person_detector initialized')
+            print("[Container] person_detector initialized")
         except Exception as e:
-            print(f'[Container] person_detector init error: {e}')
+            print(f"[Container] person_detector init error: {e}")
             self.person_detector = None
 
         try:
             self.pose_estimator = PersonPoseEstimator()
-            print('[Container] pose_estimator initialized')
+            print("[Container] pose_estimator initialized")
         except Exception as e:
-            print(f'[Container] pose_estimator init error: {e}')
+            print(f"[Container] pose_estimator init error: {e}")
             self.pose_estimator = None
 
         # TrackAttendanceUseCase получает работающие реализации
-        self.track_attendance_use_case = TrackAttendanceUseCase(self.person_detector, self.face_recognizer, self.pose_estimator, self.student_repo, self.attendance_repo)
-        self.monitor_service = MonitorService(self.track_attendance_use_case, self.get_report_use_case, self.student_service)
+        self.track_attendance_use_case = TrackAttendanceUseCase(
+            self.person_detector,
+            self.face_recognizer,
+            self.pose_estimator,
+            self.student_repo,
+            self.attendance_repo,
+        )
+        self.monitor_service = MonitorService(
+            self.track_attendance_use_case,
+            self.get_report_use_case,
+            self.student_service,
+        )
 
 
 container = Container()
