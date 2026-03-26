@@ -6,7 +6,7 @@ from deepface import DeepFace
 class FaceRecognizer:
     def __init__(self, db_path: str):
         self.db_path = db_path
-        self.model_name = "Facenet"
+        self.model_name = "OpenFace"
 
         os.makedirs(db_path, exist_ok=True)
 
