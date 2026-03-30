@@ -4,61 +4,83 @@ from deepface import DeepFace
 
 
 class FaceRecognizer:
+    """
+    Распознавание лиц через DeepFace с контролем дистанции и стабилизацией
+    """
+
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.model_name = "SFace"
+        self.distance_threshold = 0.55
+        self.identity_stability = {}
 
         os.makedirs(db_path, exist_ok=True)
 
         print(f"[AI] Инициализация DeepFace. Папка с лицами: {self.db_path}")
-        # Предзагрузка, чтобы потом работало быстрее
+
         try:
             DeepFace.build_model(self.model_name)
         except Exception as e:
             print(f"[AI] Ошибка загрузки весов модели: {e}")
 
-    def recognize(self, face_img):
+    def recognize(self, face_img, track_id=None):
         """
-        face_img: это numpy массив (вырезанный квадрат лица)
+        face_img: numpy массив лица
+        track_id: id трека (для стабилизации)
         """
-        # 1. Проверка на мусор
+
         if face_img is None or face_img.size == 0:
             return None
 
-        # Если лицо слишком маленькое (меньше 50x50 пикселей), DeepFace его не поймет
-        if face_img.shape[0] < 50 or face_img.shape[1] < 50:
-            # print("[AI] Лицо слишком мелкое для распознавания")
+        if face_img.shape[0] < 80 or face_img.shape[1] < 80:
             return None
 
         try:
-            # 2. Поиск
             results = DeepFace.find(
                 img_path=face_img,
                 db_path=self.db_path,
                 model_name=self.model_name,
-                detector_backend="skip",  # Мы верим, что YOLO вырезала лицо правильно
+                detector_backend="skip",
                 enforce_detection=False,
                 distance_metric="cosine",
                 silent=True,
             )
 
-            # 3. Анализ результата
             if results and len(results) > 0 and not results[0].empty:
                 match = results[0].iloc[0]
+
                 full_path = match["identity"]
-                distance = match["distance"]
+                distance = float(match["distance"])
 
-                # Если уверенность слабая (distance > 0.4 для Facenet - это уже сомнительно)
-                # Но для теста пока выводим всё
-                print(
-                    f"[AI] НАШЕЛ! Файл: {os.path.basename(full_path)} | Дистанция: {distance:.4f}"
-                )
+                if distance > self.distance_threshold:
+                    return None
 
-                return os.path.basename(full_path)
+                student_id = os.path.basename(full_path)
 
-            else:
-                # print("[AI] Лицо четкое, но в базе нет совпадений")
-                return None
+                if track_id is not None:
+                    stable = self.identity_stability.get(track_id)
+
+                    if stable is None:
+                        self.identity_stability[track_id] = {
+                            "id": student_id,
+                            "count": 1,
+                        }
+                        return None
+
+                    if stable["id"] == student_id:
+                        stable["count"] += 1
+                    else:
+                        stable["count"] = 0
+                        stable["id"] = student_id
+
+                    if stable["count"] >= 2:
+                        return student_id
+
+                    return None
+
+                return student_id
+
+            return None
 
         except Exception as e:
             print(f"[AI] Критическая ошибка DeepFace: {e}")

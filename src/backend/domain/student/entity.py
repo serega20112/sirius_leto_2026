@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime
-
+from typing import List
 
 @dataclass
 class Student:
-    """Сущность студента в бизнес-логике."""
-
     id: str
     name: str
     group_name: str
-    photo_path: str
+    photo_paths: List[str]
     created_at: datetime

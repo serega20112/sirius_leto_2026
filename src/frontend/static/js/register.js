@@ -4,6 +4,7 @@ function initRegisterForm() {
 
   regForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const btn = regForm.querySelector("button[type='submit']");
     const statusDiv = document.getElementById("regStatus");
 
@@ -12,12 +13,12 @@ function initRegisterForm() {
       btn.innerText = "Загрузка...";
     }
 
-    const nameVal = document.getElementById("regName").value;
-    const groupVal = document.getElementById("regGroup").value;
-    const photoFile = document.getElementById("regPhoto")?.files?.[0];
+    const nameVal = document.getElementById("regName").value.trim();
+    const groupVal = document.getElementById("regGroup").value.trim();
+    const photosFiles = document.getElementById("regPhoto")?.files;
 
-    if (!nameVal || !groupVal || !photoFile) {
-      alert("Заполните все поля!");
+    if (!nameVal || !groupVal || !photosFiles || photosFiles.length !== 3) {
+      alert("Заполните все поля и выберите ровно 3 фото!");
       if (btn) {
         btn.disabled = false;
         btn.innerText = "Добавить ученика";
@@ -28,27 +29,29 @@ function initRegisterForm() {
     const formData = new FormData();
     formData.append("name", nameVal);
     formData.append("group", groupVal);
-    formData.append("photo", photoFile);
+
+    for (let i = 0; i < photosFiles.length; i++) {
+      formData.append("photos", photosFiles[i]);
+    }
 
     try {
       const res = await fetch("/register", { method: "POST", body: formData });
       const data = await res.json().catch(() => null);
 
-      if (res.ok) {
-        // заполняем модалку
+      if (res.ok && data) {
         document.getElementById("modalBody").innerHTML = `
-                    <p><strong>Имя:</strong> ${data.name}</p>
-                    <p><strong>Группа:</strong> ${data.group}</p>
-                    <p><strong>Фото:</strong><br>
-                    <img src="/src/assets/images/${data.photo}" class="img-fluid" alt="Фото">
-                `;
-        const modal = new bootstrap.Modal(
-          document.getElementById("successModal"),
-        );
+          <p><strong>Имя:</strong> ${data.name}</p>
+          <p><strong>Группа:</strong> ${data.group}</p>
+          <p><strong>Фото:</strong><br>
+          ${data.photo_paths.map(p => `<img src="${p}" class="img-fluid mb-2" alt="Фото">`).join('')}
+          </p>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById("successModal"));
         modal.show();
 
         regForm.reset();
-        if (statusDiv) statusDiv.innerText = "Ученик успешно добавлен";
+        if (statusDiv) statusDiv.innerText = "Студент успешно добавлен";
       } else {
         const errMsg = data?.error || `HTTP ${res.status}`;
         alert("Ошибка сервера: " + errMsg);

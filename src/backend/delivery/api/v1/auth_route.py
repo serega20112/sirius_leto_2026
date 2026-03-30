@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 from src.backend.dependencies.container import get_register_service
-
+from pathlib import Path
 auth_bp = Blueprint("auth", __name__)
 
 service = get_register_service()
@@ -13,12 +13,9 @@ def register_page():
 
 @auth_bp.route("/register", methods=["POST"])
 def register_api():
-    """
-    Обработка формы регистрации студента.
-    """
     try:
-        result = service.register_student(request)
-        return jsonify(result), 201
+        student_data = service.register_student(request)  # dict
+        return jsonify(student_data), 201
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:

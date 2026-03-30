@@ -3,7 +3,7 @@ from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
 
 
 class TrackAttendanceUseCase:
-    """Сценарий обработки кадров с кэшированием распознавания."""
+    """Сценарий обработки кадров с устойчивым распознаванием и корректной фиксацией присутствия."""
 
     def __init__(
         self,
@@ -23,18 +23,21 @@ class TrackAttendanceUseCase:
         self.log_cooldowns = {}
         self.frame_count = 0
 
+        self.presence_tracker = {}
+        self.marked_students = set()
+        self.lesson_start_time = datetime.now()
+
     def execute(self, frame):
         self.frame_count += 1
         tracked_people = []
+
         try:
             if self.person_detector:
                 tracked_people = self.person_detector.track_people(frame)
         except Exception as e:
             print(f"[Track] person_detector error: {e}")
 
-        print(
-            f"[Track] frame {self.frame_count} - tracked_people: {len(tracked_people)}"
-        )
+        print(f"[Track] frame {self.frame_count} - tracked_people: {len(tracked_people)}")
 
         final_results = []
         h, w = frame.shape[:2]
@@ -55,18 +58,23 @@ class TrackAttendanceUseCase:
 
             bbox = [x1, y1, x2, y2]
 
-            if tid not in self.identity_cache or self.frame_count % 30 == 0:
+            if tid not in self.identity_cache:
                 face_crop = None
+
                 if x2 > x1 and y2 > y1:
                     face_crop = frame[y1:y2, x1:x2]
 
                 if face_crop is not None and getattr(face_crop, "size", 0) > 0:
                     try:
-                        filename = self.face_recognizer.recognize(face_crop)
+                        filename = self.face_recognizer.recognize(
+                            face_crop, track_id=tid
+                        )
                     except Exception as e:
                         print(f"[Track] face recognition error: {e}")
                         filename = None
+
                     print(f"[Track] recognition filename: {filename}")
+
                     if filename:
                         sid = filename.split(".")[0]
                         student = self.student_repo.find_by_id(sid)
@@ -85,12 +93,28 @@ class TrackAttendanceUseCase:
                     engagement = self.pose_estimator.estimate_engagement(frame, bbox)
             except Exception as e:
                 print(f"[Track] pose estimator error: {e}")
+
             print(
                 f"[Track] track_id {tid} - name: {student_name} - engagement: {engagement}"
             )
 
             if student_id and student_id != "Unknown":
-                self._log_visit(student_id, engagement)
+                now = datetime.now()
+
+                if student_id not in self.presence_tracker:
+                    self.presence_tracker[student_id] = {
+                        "first_seen": now,
+                        "last_seen": now,
+                    }
+                else:
+                    self.presence_tracker[student_id]["last_seen"] = now
+
+                if student_id not in self.marked_students:
+                    first_seen = self.presence_tracker[student_id]["first_seen"]
+
+                    if (now - first_seen).total_seconds() > 3:
+                        self._log_visit(student_id, engagement)
+                        self.marked_students.add(student_id)
 
             final_results.append(
                 {
@@ -104,11 +128,15 @@ class TrackAttendanceUseCase:
         return {"students": final_results}
 
     def _log_visit(self, student_id, engagement):
-        """Запись в базу данных с проверкой кулдауна."""
+        """Запись посещения с учетом времени и опоздания."""
         now = datetime.now()
+
         if student_id not in self.log_cooldowns or (
             now - self.log_cooldowns[student_id]
         ) > timedelta(minutes=1):
+
+            delay = (now - self.lesson_start_time).total_seconds()
+            is_late = delay > 60
 
             status_map = {
                 "high": EngagementStatus.HIGH,
@@ -121,13 +149,15 @@ class TrackAttendanceUseCase:
                 id=None,
                 student_id=student_id,
                 timestamp=now,
-                is_late=False,
+                is_late=is_late,
                 engagement_score=status_enum,
             )
 
             try:
                 self.attendance_repo.add_log(log)
                 self.log_cooldowns[student_id] = now
-                print(f"[DB] Запись для {student_id} добавлена.")
+                print(
+                    f"[DB] {student_id} отмечен | опоздание: {is_late} | задержка: {delay:.1f}s"
+                )
             except Exception as e:
                 print(f"[DB] Ошибка: {e}")
