@@ -7,6 +7,7 @@ class PersonDetector:
         self.model = YOLO(model_path)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(self.device)
+        print(f"[AI] YOLO detector device: {self.device}")
 
     def track_people(self, frame):
         results = self.model.track(
