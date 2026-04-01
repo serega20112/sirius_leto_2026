@@ -10,7 +10,13 @@ class GetReportUseCase:
 
     def execute(self) -> List[Dict]:
         """
-        Возвращает список логов, обогащенный именами студентов.
+        Executes the main scenario for GetReportUseCase.
+        
+        Args:
+            None.
+        
+        Returns:
+            The scenario execution result.
         """
         logs = self.attendance_repo.get_all_logs()
         students_cache = {s.id: s for s in self.student_repo.get_all()}
@@ -26,6 +32,8 @@ class GetReportUseCase:
                     "student_name": student_name,
                     "timestamp": log.timestamp.isoformat(),
                     "is_late": log.is_late,
+                    "status": "late" if log.is_late else "present",
+                    "arrived_at": log.timestamp.strftime("%H:%M"),
                     "engagement": log.engagement_score.value,
                 }
             )

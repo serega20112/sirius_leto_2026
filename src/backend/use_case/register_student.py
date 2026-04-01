@@ -1,7 +1,9 @@
-# src/backend/use_case/register_student.py
 import uuid
 from datetime import datetime
+
+from src.backend.application.exceptions import ValidationError
 from src.backend.domain.student.entity import Student
+
 
 class RegisterStudentUseCase:
     def __init__(self, student_repo, file_storage, face_recognizer):
@@ -10,8 +12,25 @@ class RegisterStudentUseCase:
         self.recognizer = face_recognizer
 
     def execute(self, name: str, group_name: str, photos_bytes: list[bytes]) -> Student:
+        """
+        Executes the main scenario for RegisterStudentUseCase.
+        
+        Args:
+            name: Input value for `name`.
+            group_name: Input value for `group_name`.
+            photos_bytes: Input value for `photos_bytes`.
+        
+        Returns:
+            The scenario execution result.
+        """
+        if not name or not name.strip():
+            raise ValidationError("Имя обязательно")
+
+        if not group_name or not group_name.strip():
+            raise ValidationError("Группа обязательна")
+
         if len(photos_bytes) != 3:
-            raise ValueError("Нужно ровно 3 фото")
+            raise ValidationError("Нужно ровно 3 фото")
 
         student_id = str(uuid.uuid4())
         photo_paths = []
@@ -31,4 +50,4 @@ class RegisterStudentUseCase:
 
         self.repo.save(student)
         self.recognizer.refresh_db()
-        return student  # возвращаем объект Student
+        return student

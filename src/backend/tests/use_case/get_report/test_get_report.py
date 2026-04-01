@@ -6,7 +6,15 @@ from src.backend.use_case.get_report import GetReportUseCase
 
 @pytest.fixture
 def mock_dependencies():
-    """Создает моки репозиториев для изоляции use case."""
+    """
+    Verifies scenario mock dependencies.
+    
+    Args:
+        None.
+    
+    Returns:
+        The function result.
+    """
     return {
         "attendance_repo": MagicMock(),
         "student_repo": MagicMock(),
@@ -25,6 +33,8 @@ def mock_dependencies():
                     "student_name": "Иван Иванов",
                     "timestamp": "2026-02-13T10:00:00",
                     "is_late": False,
+                    "status": "present",
+                    "arrived_at": "10:00",
                     "engagement": "high",
                 }
             ],
@@ -38,8 +48,16 @@ def mock_dependencies():
 )
 def test_execute(mock_dependencies, attendance_exists, student_exists, expected_report):
     """
-    Тестирует формирование журнала посещаемости.
-    Ожидается корректный список логов с именами студентов.
+    Verifies scenario execute.
+    
+    Args:
+        mock_dependencies: Input value for `mock_dependencies`.
+        attendance_exists: Input value for `attendance_exists`.
+        student_exists: Input value for `student_exists`.
+        expected_report: Input value for `expected_report`.
+    
+    Returns:
+        Does not return a value.
     """
 
     if attendance_exists:

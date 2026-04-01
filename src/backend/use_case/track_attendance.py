@@ -1,3 +1,4 @@
+from datetime import date as date_type
 from datetime import datetime, timedelta
 
 from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
@@ -34,10 +35,18 @@ class TrackAttendanceUseCase:
         self.frame_count = 0
 
         self.presence_tracker: dict[str, dict[str, datetime]] = {}
-        self.marked_students = set()
-        self.lesson_start_time = datetime.now()
+        self.marked_students: dict[str, date_type] = {}
 
     def execute(self, frame):
+        """
+        Executes the main scenario for TrackAttendanceUseCase.
+        
+        Args:
+            frame: Input value for `frame`.
+        
+        Returns:
+            The scenario execution result.
+        """
         self.frame_count += 1
         now = datetime.now()
         tracked_people = []
@@ -72,13 +81,14 @@ class TrackAttendanceUseCase:
 
             bbox = [x1, y1, x2, y2]
             self.track_last_seen[tid] = now
+            matched_face = self._match_face_to_person(bbox, detected_faces)
 
-            self._resolve_identity(frame, bbox, tid, detected_faces)
+            self._resolve_identity(frame, bbox, tid, matched_face)
             cached = self.identity_cache.get(tid, {"name": "Unknown", "sid": None})
             student_name = cached["name"]
             student_id = cached["sid"]
 
-            engagement = self._estimate_engagement(frame, bbox, tid)
+            engagement = self._estimate_engagement(frame, bbox, tid, matched_face)
 
             print(
                 f"[Track] track_id {tid} - name: {student_name} - engagement: {engagement}"
@@ -87,6 +97,8 @@ class TrackAttendanceUseCase:
             if student_id and student_id != "Unknown":
                 presence_state = self.presence_tracker.get(student_id)
                 if presence_state is None or (
+                    presence_state["first_seen"].date() != now.date()
+                ) or (
                     now - presence_state["last_seen"]
                 ).total_seconds() > self.config.stale_track_ttl_seconds:
                     self.presence_tracker[student_id] = {
@@ -96,14 +108,15 @@ class TrackAttendanceUseCase:
                 else:
                     self.presence_tracker[student_id]["last_seen"] = now
 
-                if student_id not in self.marked_students:
+                if self.marked_students.get(student_id) != now.date():
                     first_seen = self.presence_tracker[student_id]["first_seen"]
 
                     if (
                         now - first_seen
                     ).total_seconds() >= self.config.presence_confirmation_seconds:
-                        self._log_visit(student_id, engagement, now)
-                        self.marked_students.add(student_id)
+                        is_accounted_for_today = self._log_visit(student_id, engagement, now)
+                        if is_accounted_for_today:
+                            self.marked_students[student_id] = now.date()
 
             final_results.append(
                 {
@@ -118,21 +131,44 @@ class TrackAttendanceUseCase:
         return {"students": final_results}
 
     def _detect_faces(self, frame) -> list[dict]:
+        """
+        Runs the internal step detect faces.
+        
+        Args:
+            frame: Input value for `frame`.
+        
+        Returns:
+            The function result.
+        """
         if not self.face_recognizer or not hasattr(self.face_recognizer, "detect_faces"):
             return []
 
         try:
-            return self.face_recognizer.detect_faces(frame)
+            detected_faces = self.face_recognizer.detect_faces(frame)
         except Exception as e:
             print(f"[Track] face detector error: {e}")
             return []
 
-    def _resolve_identity(self, frame, bbox, track_id: int, detected_faces: list[dict]) -> None:
+        return detected_faces if isinstance(detected_faces, list) else []
+
+    def _resolve_identity(self, frame, bbox, track_id: int, matched_face: dict | None) -> None:
+        """
+        Runs the internal step resolve identity.
+        
+        Args:
+            frame: Input value for `frame`.
+            bbox: Input value for `bbox`.
+            track_id: Input value for `track_id`.
+            matched_face: Input value for `matched_face`.
+        
+        Returns:
+            Does not return a value.
+        """
         cached_identity = self.identity_cache.get(track_id)
         if cached_identity and cached_identity.get("sid"):
             return
 
-        face_crop = self._select_face_crop(frame, bbox, detected_faces)
+        face_crop = self._select_face_crop(frame, bbox, matched_face)
         if face_crop is None or getattr(face_crop, "size", 0) == 0:
             self.identity_cache[track_id] = {"name": "Unknown", "sid": None}
             return
@@ -158,7 +194,19 @@ class TrackAttendanceUseCase:
 
         self.identity_cache[track_id] = {"name": student.name, "sid": student.id}
 
-    def _estimate_engagement(self, frame, bbox, track_id: int) -> str:
+    def _estimate_engagement(self, frame, bbox, track_id: int, matched_face: dict | None) -> str:
+        """
+        Runs the internal step estimate engagement.
+        
+        Args:
+            frame: Input value for `frame`.
+            bbox: Input value for `bbox`.
+            track_id: Input value for `track_id`.
+            matched_face: Input value for `matched_face`.
+        
+        Returns:
+            The function result.
+        """
         if not self.pose_estimator:
             return "unknown"
 
@@ -167,6 +215,7 @@ class TrackAttendanceUseCase:
                 frame,
                 bbox,
                 track_id=track_id,
+                face_bbox=matched_face["bbox"] if matched_face else None,
             )
         except TypeError:
             return self.pose_estimator.estimate_engagement(frame, bbox)
@@ -174,14 +223,34 @@ class TrackAttendanceUseCase:
             print(f"[Track] pose estimator error: {e}")
             return "unknown"
 
-    def _select_face_crop(self, frame, bbox, detected_faces: list[dict]):
-        matched_face = self._match_face_to_person(bbox, detected_faces)
+    def _select_face_crop(self, frame, bbox, matched_face: dict | None):
+        """
+        Runs the internal step select face crop.
+        
+        Args:
+            frame: Input value for `frame`.
+            bbox: Input value for `bbox`.
+            matched_face: Input value for `matched_face`.
+        
+        Returns:
+            The function result.
+        """
         if matched_face is not None:
             return matched_face["crop"]
 
         return self._extract_face_crop(frame, bbox)
 
     def _match_face_to_person(self, bbox, detected_faces: list[dict]) -> dict | None:
+        """
+        Runs the internal step match face to person.
+        
+        Args:
+            bbox: Input value for `bbox`.
+            detected_faces: Input value for `detected_faces`.
+        
+        Returns:
+            The function result.
+        """
         if not detected_faces:
             return None
 
@@ -201,6 +270,15 @@ class TrackAttendanceUseCase:
         return best_face
 
     def _build_head_region(self, bbox) -> list[int]:
+        """
+        Runs the internal step build head region.
+        
+        Args:
+            bbox: Input value for `bbox`.
+        
+        Returns:
+            The function result.
+        """
         x1, y1, x2, y2 = bbox
         width = x2 - x1
         height = y2 - y1
@@ -215,6 +293,16 @@ class TrackAttendanceUseCase:
         ]
 
     def _extract_face_crop(self, frame, bbox):
+        """
+        Runs the internal step extract face crop.
+        
+        Args:
+            frame: Input value for `frame`.
+            bbox: Input value for `bbox`.
+        
+        Returns:
+            The function result.
+        """
         x1, y1, x2, y2 = bbox
         width = x2 - x1
         height = y2 - y1
@@ -237,6 +325,16 @@ class TrackAttendanceUseCase:
 
     @staticmethod
     def _intersection_over_face_area(first_bbox, second_bbox) -> float:
+        """
+        Runs the internal step intersection over face area.
+        
+        Args:
+            first_bbox: Input value for `first_bbox`.
+            second_bbox: Input value for `second_bbox`.
+        
+        Returns:
+            The function result.
+        """
         ax1, ay1, ax2, ay2 = first_bbox
         bx1, by1, bx2, by2 = second_bbox
 
@@ -253,6 +351,15 @@ class TrackAttendanceUseCase:
         return intersection / face_area
 
     def _cleanup_stale_tracks(self, now: datetime) -> None:
+        """
+        Runs the internal step cleanup stale tracks.
+        
+        Args:
+            now: Input value for `now`.
+        
+        Returns:
+            Does not return a value.
+        """
         stale_track_ids = [
             track_id
             for track_id, last_seen in self.track_last_seen.items()
@@ -269,35 +376,88 @@ class TrackAttendanceUseCase:
             if self.pose_estimator and hasattr(self.pose_estimator, "forget_track"):
                 self.pose_estimator.forget_track(track_id)
 
-    def _log_visit(self, student_id, engagement, now: datetime):
-        """Запись посещения с учетом времени и опоздания."""
-        if student_id not in self.log_cooldowns or (
-            now - self.log_cooldowns[student_id]
-        ) > timedelta(seconds=self.config.log_cooldown_seconds):
+    def _log_visit(self, student_id, engagement, now: datetime) -> bool:
+        """
+        Runs the internal step log visit.
+        
+        Args:
+            student_id: Input value for `student_id`.
+            engagement: Input value for `engagement`.
+            now: Input value for `now`.
+        
+        Returns:
+            The function result.
+        """
+        cooldown_deadline = timedelta(seconds=self.config.log_cooldown_seconds)
+        last_logged_at = self.log_cooldowns.get(student_id)
+        if last_logged_at and last_logged_at.date() == now.date() and (
+            now - last_logged_at
+        ) <= cooldown_deadline:
+            return True
 
-            delay = (now - self.lesson_start_time).total_seconds()
-            is_late = delay > self.config.late_after_seconds
+        if self._has_log_for_date(student_id, now.date()):
+            self.log_cooldowns[student_id] = now
+            return True
 
-            status_map = {
-                "high": EngagementStatus.HIGH,
-                "medium": EngagementStatus.MEDIUM,
-                "low": EngagementStatus.LOW,
-            }
-            status_enum = status_map.get(engagement, EngagementStatus.UNKNOWN)
+        lesson_start_at = self._resolve_lesson_start(now)
+        delay = max(0.0, (now - lesson_start_at).total_seconds())
+        is_late = now > lesson_start_at + timedelta(
+            seconds=self.config.late_after_seconds
+        )
 
-            log = AttendanceLog(
-                id=None,
-                student_id=student_id,
-                timestamp=now,
-                is_late=is_late,
-                engagement_score=status_enum,
+        status_map = {
+            "high": EngagementStatus.HIGH,
+            "medium": EngagementStatus.MEDIUM,
+            "low": EngagementStatus.LOW,
+        }
+        status_enum = status_map.get(engagement, EngagementStatus.UNKNOWN)
+
+        log = AttendanceLog(
+            id=None,
+            student_id=student_id,
+            timestamp=now,
+            is_late=is_late,
+            engagement_score=status_enum,
+        )
+
+        try:
+            self.attendance_repo.add_log(log)
+            self.log_cooldowns[student_id] = now
+            print(
+                f"[DB] {student_id} отмечен | опоздание: {is_late} | задержка: {delay:.1f}s"
             )
+            return True
+        except Exception as e:
+            print(f"[DB] Ошибка: {e}")
+            return False
 
-            try:
-                self.attendance_repo.add_log(log)
-                self.log_cooldowns[student_id] = now
-                print(
-                    f"[DB] {student_id} отмечен | опоздание: {is_late} | задержка: {delay:.1f}s"
-                )
-            except Exception as e:
-                print(f"[DB] Ошибка: {e}")
+    def _has_log_for_date(self, student_id: str, target_date: date_type) -> bool:
+        """
+        Runs the internal step has log for date.
+        
+        Args:
+            student_id: Input value for `student_id`.
+            target_date: Input value for `target_date`.
+        
+        Returns:
+            The function result.
+        """
+        try:
+            logs = self.attendance_repo.get_logs_by_student(student_id)
+        except Exception as e:
+            print(f"[DB] Ошибка чтения логов {student_id}: {e}")
+            return False
+
+        return any(log.timestamp.date() == target_date for log in logs)
+
+    def _resolve_lesson_start(self, now: datetime) -> datetime:
+        """
+        Runs the internal step resolve lesson start.
+        
+        Args:
+            now: Input value for `now`.
+        
+        Returns:
+            The function result.
+        """
+        return datetime.combine(now.date(), self.config.lesson_start_time)

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -17,6 +17,20 @@ def _build_use_case(
     attendance_repo=None,
     config=None,
 ):
+    """
+    Verifies scenario build use case.
+    
+    Args:
+        detector: Input value for `detector`.
+        recognizer: Input value for `recognizer`.
+        pose_estimator: Input value for `pose_estimator`.
+        student_repo: Input value for `student_repo`.
+        attendance_repo: Input value for `attendance_repo`.
+        config: Input value for `config`.
+    
+    Returns:
+        The function result.
+    """
     return TrackAttendanceUseCase(
         person_detector=detector or MagicMock(),
         face_recognizer=recognizer or MagicMock(),
@@ -28,10 +42,20 @@ def _build_use_case(
 
 
 def test_execute_logs_known_student_after_presence_confirmation():
+    """
+    Verifies scenario execute logs known student after presence confirmation.
+    
+    Args:
+        None.
+    
+    Returns:
+        Does not return a value.
+    """
     detector = MagicMock()
     detector.track_people.return_value = [{"bbox": [10, 10, 110, 210], "track_id": 7}]
 
     recognizer = MagicMock()
+    recognizer.detect_faces.return_value = []
     recognizer.recognize.return_value = "student-1"
 
     pose_estimator = MagicMock()
@@ -44,6 +68,7 @@ def test_execute_logs_known_student_after_presence_confirmation():
     )
 
     attendance_repo = MagicMock()
+    attendance_repo.get_logs_by_student.return_value = []
     config = AttendanceTrackingConfig(presence_confirmation_seconds=0.0)
     use_case = _build_use_case(
         detector=detector,
@@ -67,10 +92,20 @@ def test_execute_logs_known_student_after_presence_confirmation():
 
 
 def test_execute_retries_unknown_identity_on_next_frame():
+    """
+    Verifies scenario execute retries unknown identity on next frame.
+    
+    Args:
+        None.
+    
+    Returns:
+        Does not return a value.
+    """
     detector = MagicMock()
     detector.track_people.return_value = [{"bbox": [10, 10, 110, 210], "track_id": 3}]
 
     recognizer = MagicMock()
+    recognizer.detect_faces.return_value = []
     recognizer.recognize.side_effect = [None, "student-1"]
 
     pose_estimator = MagicMock()
@@ -101,10 +136,20 @@ def test_execute_retries_unknown_identity_on_next_frame():
 
 
 def test_execute_forgets_stale_tracks():
+    """
+    Verifies scenario execute forgets stale tracks.
+    
+    Args:
+        None.
+    
+    Returns:
+        Does not return a value.
+    """
     detector = MagicMock()
     detector.track_people.return_value = [{"bbox": [10, 10, 110, 210], "track_id": 5}]
 
     recognizer = MagicMock()
+    recognizer.detect_faces.return_value = []
     recognizer.recognize.return_value = None
 
     pose_estimator = MagicMock()
@@ -128,3 +173,151 @@ def test_execute_forgets_stale_tracks():
 
     recognizer.forget_track.assert_called_once_with(5)
     pose_estimator.forget_track.assert_called_once_with(5)
+
+
+def test_execute_passes_matched_face_bbox_to_engagement_estimator():
+    """
+    Verifies scenario execute passes matched face bbox to engagement estimator.
+    
+    Args:
+        None.
+    
+    Returns:
+        Does not return a value.
+    """
+    detector = MagicMock()
+    detector.track_people.return_value = [{"bbox": [10, 10, 110, 210], "track_id": 9}]
+
+    recognizer = MagicMock()
+    recognizer.detect_faces.return_value = [
+        {
+            "bbox": [20, 20, 90, 120],
+            "crop": np.zeros((100, 70, 3), dtype=np.uint8),
+            "confidence": 1.0,
+        }
+    ]
+    recognizer.recognize.return_value = "student-9"
+
+    pose_estimator = MagicMock()
+    pose_estimator.estimate_engagement.return_value = "medium"
+
+    student_repo = MagicMock()
+    student_repo.find_by_id.return_value = SimpleNamespace(
+        id="student-9",
+        name="Alice",
+    )
+
+    use_case = _build_use_case(
+        detector=detector,
+        recognizer=recognizer,
+        pose_estimator=pose_estimator,
+        student_repo=student_repo,
+        config=AttendanceTrackingConfig(presence_confirmation_seconds=999.0),
+    )
+
+    frame = np.zeros((240, 240, 3), dtype=np.uint8)
+    use_case.execute(frame)
+
+    _, kwargs = pose_estimator.estimate_engagement.call_args
+    assert kwargs["face_bbox"] == [20, 20, 90, 120]
+
+
+def test_execute_logs_student_again_on_new_day():
+    """
+    Verifies scenario execute logs student again on new day.
+    
+    Args:
+        None.
+    
+    Returns:
+        Does not return a value.
+    """
+    detector = MagicMock()
+    detector.track_people.return_value = [{"bbox": [10, 10, 110, 210], "track_id": 7}]
+
+    recognizer = MagicMock()
+    recognizer.detect_faces.return_value = []
+    recognizer.recognize.return_value = "student-1"
+
+    pose_estimator = MagicMock()
+    pose_estimator.estimate_engagement.return_value = "high"
+
+    student_repo = MagicMock()
+    student_repo.find_by_id.return_value = SimpleNamespace(
+        id="student-1",
+        name="Alice",
+    )
+
+    attendance_repo = MagicMock()
+    attendance_repo.get_logs_by_student.return_value = []
+    use_case = _build_use_case(
+        detector=detector,
+        recognizer=recognizer,
+        pose_estimator=pose_estimator,
+        student_repo=student_repo,
+        attendance_repo=attendance_repo,
+        config=AttendanceTrackingConfig(presence_confirmation_seconds=0.0),
+    )
+    use_case.marked_students["student-1"] = datetime.now().date() - timedelta(days=1)
+
+    frame = np.zeros((240, 240, 3), dtype=np.uint8)
+    use_case.execute(frame)
+
+    attendance_repo.add_log.assert_called_once()
+
+
+def test_log_visit_uses_lesson_start_time_for_late_mark():
+    """
+    Verifies scenario log visit uses lesson start time for late mark.
+    
+    Args:
+        None.
+    
+    Returns:
+        Does not return a value.
+    """
+    attendance_repo = MagicMock()
+    attendance_repo.get_logs_by_student.return_value = []
+    use_case = _build_use_case(
+        attendance_repo=attendance_repo,
+        config=AttendanceTrackingConfig(
+            lesson_start_time=time(9, 0),
+            late_after_seconds=300.0,
+        ),
+    )
+
+    logged = use_case._log_visit(
+        "student-1",
+        "high",
+        datetime(2026, 4, 1, 9, 10, 0),
+    )
+
+    assert logged is True
+    saved_log = attendance_repo.add_log.call_args.args[0]
+    assert saved_log.is_late is True
+
+
+def test_log_visit_skips_duplicate_log_for_same_day():
+    """
+    Verifies scenario log visit skips duplicate log for same day.
+    
+    Args:
+        None.
+    
+    Returns:
+        Does not return a value.
+    """
+    attendance_repo = MagicMock()
+    attendance_repo.get_logs_by_student.return_value = [
+        SimpleNamespace(timestamp=datetime(2026, 4, 1, 9, 5, 0))
+    ]
+    use_case = _build_use_case(attendance_repo=attendance_repo)
+
+    logged = use_case._log_visit(
+        "student-1",
+        "medium",
+        datetime(2026, 4, 1, 9, 15, 0),
+    )
+
+    assert logged is True
+    attendance_repo.add_log.assert_not_called()

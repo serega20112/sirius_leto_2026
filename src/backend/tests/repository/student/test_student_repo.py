@@ -1,20 +1,21 @@
-import sys
-import os
+from datetime import datetime
+from types import SimpleNamespace
 
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
+from src.backend.infrastructure.persistence.sqlite.student_repository import (
+    SqliteStudentRepository,
 )
 
-import pytest
-from unittest.mock import MagicMock
-from src.backend.repository.student.student_repo import SqliteStudentRepository
-from src.backend.domain.student.entity import Student
-from src.backend.tests.common.fixtures import mock_session, mock_student
 
-
-def save_test(mock_session, mock_student):
+def test_save_persists_student(mock_session, mock_student):
     """
-    Тестируем метод save, проверяем, что данные студента сохраняются в базу данных.
+    Verifies scenario save persists student.
+    
+    Args:
+        mock_session: Input value for `mock_session`.
+        mock_student: Input value for `mock_student`.
+    
+    Returns:
+        Does not return a value.
     """
     repo = SqliteStudentRepository(mock_session)
 
@@ -24,66 +25,75 @@ def save_test(mock_session, mock_student):
     mock_session.commit.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    "student_id, expected_name",
-    [
-        ("123", "Иван Иванов"),
-        ("456", None),
-    ],
-)
-def find_by_id_test(mock_session, student_id, expected_name):
+def test_find_by_id_returns_domain_student(mock_session):
     """
-    Тестируем метод find_by_id с параметризацией.
-    Проверяем, что возвращается корректный студент или None.
+    Verifies scenario find by id returns domain student.
+    
+    Args:
+        mock_session: Input value for `mock_session`.
+    
+    Returns:
+        Does not return a value.
     """
-    mock_session.query.return_value.filter.return_value.first.return_value = (
-        MagicMock(
-            id="123",
-            name="Иван Иванов",
-            group_name="10А",
-            photo_path="/path/to/photo.jpg",
-            created_at="2026-02-13",
-        )
-        if student_id == "123"
-        else None
+    model = SimpleNamespace(
+        to_domain=lambda: SimpleNamespace(id="123", name="Иван Иванов"),
     )
+    mock_session.query.return_value.filter_by.return_value.first.return_value = model
 
     repo = SqliteStudentRepository(mock_session)
-    student = repo.find_by_id(student_id)
+    student = repo.find_by_id("123")
 
-    if expected_name:
-        assert student.name == expected_name
-    else:
-        assert student is None
+    assert student.id == "123"
+    assert student.name == "Иван Иванов"
 
 
-@pytest.mark.parametrize(
-    "group_name, expected_count",
-    [
-        ("10А", 1),
-        ("11Б", 0),
-    ],
-)
-def get_groups_with_students_test(mock_session, group_name, expected_count):
+def test_find_by_name_returns_domain_student(mock_session):
     """
-    Тестируем метод get_groups_with_students с параметризацией.
-    Проверяем, что группы возвращаются корректно.
+    Verifies scenario find by name returns domain student.
+    
+    Args:
+        mock_session: Input value for `mock_session`.
+    
+    Returns:
+        Does not return a value.
     """
-    mock_session.query.return_value.all.return_value = (
-        [
-            MagicMock(
+    model = SimpleNamespace(
+        to_domain=lambda: SimpleNamespace(id="123", name="Иван Иванов"),
+    )
+    mock_session.query.return_value.filter_by.return_value.first.return_value = model
+
+    repo = SqliteStudentRepository(mock_session)
+    student = repo.find_by_name("Иван Иванов")
+
+    assert student.id == "123"
+    assert student.name == "Иван Иванов"
+
+
+def test_get_all_returns_domain_students(mock_session):
+    """
+    Verifies scenario get all returns domain students.
+    
+    Args:
+        mock_session: Input value for `mock_session`.
+    
+    Returns:
+        Does not return a value.
+    """
+    created_at = datetime(2026, 2, 13)
+    models = [
+        SimpleNamespace(
+            to_domain=lambda: SimpleNamespace(
                 id="123",
                 name="Иван Иванов",
                 group_name="10А",
-                photo_path="/path/to/photo.jpg",
-                created_at="2026-02-13",
+                created_at=created_at,
             )
-        ]
-        if group_name == "10А"
-        else []
-    )
+        )
+    ]
+    mock_session.query.return_value.all.return_value = models
 
     repo = SqliteStudentRepository(mock_session)
-    groups = repo.get_groups_with_students()
+    students = repo.get_all()
 
-    assert len(groups.get(group_name, [])) == expected_count
+    assert len(students) == 1
+    assert students[0].group_name == "10А"

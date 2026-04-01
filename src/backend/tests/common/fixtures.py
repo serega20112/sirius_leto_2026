@@ -1,11 +1,22 @@
-import pytest
+from datetime import datetime
 from unittest.mock import MagicMock
+
+import pytest
+
+from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
+from src.backend.domain.student.entity import Student
 
 
 @pytest.fixture
 def mock_session():
     """
-    Фикстура для создания мок-сессии базы данных.
+    Verifies scenario mock session.
+    
+    Args:
+        None.
+    
+    Returns:
+        The function result.
     """
     return MagicMock()
 
@@ -13,30 +24,42 @@ def mock_session():
 @pytest.fixture
 def mock_attendance_log():
     """
-    Фикстура для создания тестового объекта AttendanceLog.
+    Verifies scenario mock attendance log.
+    
+    Args:
+        None.
+    
+    Returns:
+        The function result.
     """
-    from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
-
     return AttendanceLog(
         id=None,
         student_id="123",
-        timestamp="2026-02-13 10:00:00",
+        timestamp=datetime(2026, 2, 13, 10, 0, 0),
         is_late=False,
-        engagement_score=EngagementStatus.ACTIVE,
+        engagement_score=EngagementStatus.HIGH,
     )
 
 
 @pytest.fixture
 def mock_student():
     """
-    Фикстура для создания тестового объекта Student.
+    Verifies scenario mock student.
+    
+    Args:
+        None.
+    
+    Returns:
+        The function result.
     """
-    from src.backend.domain.student.entity import Student
-
     return Student(
         id="123",
         name="Иван Иванов",
         group_name="10А",
-        photo_path="/path/to/photo.jpg",
-        created_at="2026-02-13",
+        photo_paths=[
+            "/path/to/photo_1.jpg",
+            "/path/to/photo_2.jpg",
+            "/path/to/photo_3.jpg",
+        ],
+        created_at=datetime(2026, 2, 13, 0, 0, 0),
     )
