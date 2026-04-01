@@ -1,20 +1,76 @@
-.form-control:focus {
-  box-shadow: none;
-  border-color: var(--text-primary);
+.register-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 760px);
+  justify-content: center;
 }
 
-.btn-primary {
-  background-color: var(--text-primary);
-  border-color: var(--text-primary);
+.register-form-panel {
+  padding: 28px;
 }
 
-.btn-primary:hover {
-  background-color: #3f8ae0;
-  border-color: #3f8ae0;
+.form-heading {
+  margin-bottom: 20px;
 }
 
-#regStatus {
-  font-weight: bold;
-  margin-top: 10px;
+.register-form {
+  display: grid;
+  gap: 18px;
+}
+
+.field-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-label {
   color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.upload-note {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.btn-register {
+  min-height: 58px;
+  margin-top: 4px;
+}
+
+.form-status {
+  min-height: 24px;
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+#modalBody {
+  display: grid;
+  gap: 12px;
+}
+
+#modalBody p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+#modalBody strong {
+  color: var(--text-primary);
+}
+
+#modalBody img {
+  width: 100%;
+  max-width: 180px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+}
+
+@media (max-width: 575.98px) {
+  .register-form-panel {
+    padding: 20px;
+  }
 }

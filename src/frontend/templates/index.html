@@ -2,7 +2,11 @@
 <html lang="ru" data-bs-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <title>Панель Преподавателя | AI School</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>{% block title %}Sirius Leto 2026{% endblock %}</title>
 
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
@@ -17,46 +21,149 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/base.css') }}"
     />
+    {% block page_styles %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/index.css') }}"
+    />
+    {% endblock %}
   </head>
   <body>
-    <div class="container-fluid">
-      <div class="row">
-        <nav class="col-md-2 d-none d-md-block sidebar shadow">
-          <div class="position-sticky pt-3 px-3">
-            <h5 class="text-primary fw-bold">AI ШКОЛА</h5>
-            <p class="small text-secondary">Панель учителя</p>
+    <div class="app-shell">
+      <aside class="app-sidebar">
+        <a class="brand-block brand-block-simple" href="/">
+          <strong class="brand-title brand-title-only">AI school</strong>
+        </a>
 
-            <ul class="nav flex-column mb-4">
-              <li class="nav-item">
-                <a class="nav-link" href="/">Мониторинг</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/groups">Группы и ученики</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/register">Регистрация</a>
-              </li>
-            </ul>
-          </div>
+        <nav class="nav-rail">
+          <a
+            class="nav-pill {% if request.path == '/' %}is-active{% endif %}"
+            href="/"
+          >
+            <i class="bi bi-broadcast"></i>
+            <span>Мониторинг</span>
+          </a>
+          <a
+            class="nav-pill {% if request.path.startswith('/groups') %}is-active{% endif %}"
+            href="/groups"
+          >
+            <i class="bi bi-people"></i>
+            <span>Группы и ученики</span>
+          </a>
+          <a
+            class="nav-pill {% if request.path.startswith('/register') %}is-active{% endif %}"
+            href="/register"
+          >
+            <i class="bi bi-person-plus"></i>
+            <span>Регистрация</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <nav class="app-mobile-nav">
+          <a
+            class="nav-pill mobile-nav-pill {% if request.path == '/' %}is-active{% endif %}"
+            href="/"
+          >
+            <i class="bi bi-broadcast"></i>
+          </a>
+          <a
+            class="nav-pill mobile-nav-pill {% if request.path.startswith('/groups') %}is-active{% endif %}"
+            href="/groups"
+          >
+            <i class="bi bi-people"></i>
+          </a>
+          <a
+            class="nav-pill mobile-nav-pill {% if request.path.startswith('/register') %}is-active{% endif %}"
+            href="/register"
+          >
+            <i class="bi bi-person-plus"></i>
+          </a>
         </nav>
 
-        <main class="col-md-10 ms-sm-auto px-md-4 py-4">
-          {% if request.path == '/' %}
-          <h5 class="mb-3">Видеопоток с камеры</h5>
-          <div class="video-container">
-            <img
-              id="videoStream"
-              src="{{ url_for('monitor.video_feed') }}"
-              class="img-fluid border rounded"
-              alt="Видеопоток"
-            />
+        <header class="app-header">
+          {% set subtitle %}{% block page_subtitle %}{% endblock %}{% endset %}
+          <div>
+            <span class="eyebrow">{% block eyebrow %}Панель преподавателя{% endblock %}</span>
+            <h1 class="page-title">
+              {% block page_title %}Мониторинг аудитории{% endblock %}
+            </h1>
+            {% if subtitle|trim %}
+            <p class="page-subtitle">
+              {{ subtitle|trim }}
+            </p>
+            {% endif %}
           </div>
-          {% endif %} {% block content %}{% endblock %}
-        </main>
-      </div>
+          <div class="header-tools">
+            <div class="live-pill">
+              <span class="pulse-dot"></span>
+              <span>Локальный поток активен</span>
+            </div>
+            <div class="app-clock" id="currentTime"></div>
+          </div>
+        </header>
+
+        {% block page_content %}
+        <section class="surface-panel stats-strip">
+          <article class="stat-chip">
+            <span class="stat-chip-label">Пришли вовремя</span>
+            <strong id="statPresent" class="stat-chip-value">0</strong>
+          </article>
+          <article class="stat-chip stat-chip-warm">
+            <span class="stat-chip-label">Опоздали</span>
+            <strong id="statLate" class="stat-chip-value">0</strong>
+          </article>
+        </section>
+
+        <section class="monitor-grid">
+          <section class="surface-panel stream-panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-badge">Камера</div>
+                <h2 class="panel-title">Прямой эфир из аудитории</h2>
+              </div>
+              <span class="stream-status">
+                <span class="pulse-dot"></span>
+                MJPEG live
+              </span>
+            </div>
+
+            <div class="video-frame">
+              <img
+                id="videoStream"
+                src="{{ url_for('monitor.video_feed') }}"
+                alt="Видеопоток"
+              />
+            </div>
+          </section>
+
+          <aside class="surface-panel journal-panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-badge">Журнал</div>
+                <h2 class="panel-title">Последние отметки</h2>
+                <p class="panel-copy">
+                  Лента обновляется автоматически и показывает последние
+                  зафиксированные входы.
+                </p>
+              </div>
+            </div>
+
+            <div id="attendanceChart" class="journal-feed">
+              <div class="feed-empty">
+                Журнал пока пуст. Как только система зафиксирует ученика, записи
+                появятся здесь.
+              </div>
+            </div>
+          </aside>
+        </section>
+        {% endblock %}
+      </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    {% block page_scripts %}{% endblock %}
   </body>
 </html>

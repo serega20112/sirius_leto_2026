@@ -1,48 +1,90 @@
 {% extends "index.html" %}
-{% block content %}
-<div class="container mt-5">
-  <h3 class="mb-4">Регистрация студента</h3>
-
-  <form id="registerForm" enctype="multipart/form-data">
-    <div class="mb-3">
-      <label for="regName" class="form-label">Имя</label>
-      <input type="text" class="form-control" id="regName" name="name" required placeholder="Введите имя" />
+{% block title %}Регистрация ученика | Sirius Leto 2026{% endblock %}
+{% block page_title %}Добавить ученика{% endblock %}
+{% block page_styles %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/register.css') }}"
+/>
+{% endblock %}
+{% block page_content %}
+<section class="register-layout">
+  <section class="surface-panel register-form-panel">
+    <div class="form-heading">
+      <h2 class="panel-title">Данные ученика</h2>
     </div>
 
-    <div class="mb-3">
-      <label for="regGroup" class="form-label">Группа</label>
-      <input type="text" class="form-control" id="regGroup" name="group" required placeholder="Введите группу" />
-    </div>
+    <form id="registerForm" class="register-form" enctype="multipart/form-data">
+      <label class="field-shell" for="regName">
+        <span class="field-label">Имя ученика</span>
+        <input
+          type="text"
+          class="form-control"
+          id="regName"
+          name="name"
+          required
+          placeholder="Например, Иван Петров"
+        />
+      </label>
 
-    <div class="mb-3">
-      <label for="regPhoto" class="form-label">Фото студента (3 разных ракурса)</label>
-      <input type="file" class="form-control" id="regPhoto" name="photos" accept="image/*" multiple required />
-      <small class="form-text text-muted">Выберите ровно 3 фото</small>
-    </div>
+      <label class="field-shell" for="regGroup">
+        <span class="field-label">Группа</span>
+        <input
+          type="text"
+          class="form-control"
+          id="regGroup"
+          name="group"
+          required
+          placeholder="Например, 10А"
+        />
+      </label>
 
-    <button type="submit" class="btn btn-primary">Добавить ученика</button>
-    <div id="regStatus" class="mt-2 text-success"></div>
-  </form>
-</div>
+      <label class="field-shell" for="regPhoto">
+        <span class="field-label">Три фотографии</span>
+        <input
+          type="file"
+          class="form-control"
+          id="regPhoto"
+          name="photos"
+          accept="image/*"
+          multiple
+          required
+        />
+        <span id="regPhotoHint" class="upload-note">
+          Выберите ровно 3 фото с разным углом лица.
+        </span>
+      </label>
+
+      <button type="submit" class="btn btn-primary btn-register">
+        Добавить ученика
+      </button>
+      <div id="regStatus" class="form-status"></div>
+    </form>
+  </section>
+</section>
 
 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Успешная регистрация</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        <h5 class="modal-title">Профиль создан</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Закрыть"
+        ></button>
       </div>
       <div class="modal-body" id="modalBody"></div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Закрыть
+        </button>
       </div>
     </div>
   </div>
 </div>
-
-<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}" />
-
-<script src="{{ url_for('static', filename='js/base.js') }}"></script>
+{% endblock %}
+{% block page_scripts %}
 <script src="{{ url_for('static', filename='js/register.js') }}"></script>
 {% endblock %}

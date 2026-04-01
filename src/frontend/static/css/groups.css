@@ -1,102 +1,274 @@
-#groupsAccordion .accordion-button {
-  background-color: var(--bg-card);
-  color: #c9d1d9;
+.groups-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 22px;
+  margin-bottom: 22px;
 }
 
-#groupsAccordion .accordion-button:not(.collapsed) {
-  background-color: #1f6feb22;
+.page-intro-card,
+.page-summary-card {
+  padding: 26px;
+}
+
+.page-intro-card .panel-title {
+  font-size: clamp(1.5rem, 2.1vw, 2.2rem);
+}
+
+.page-summary-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(23, 182, 157, 0.14), transparent 30%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.summary-pip {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.summary-label {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summary-value {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 2.3rem;
+  line-height: 0.95;
+}
+
+.groups-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.group-item {
+  border: 0;
+  background: transparent;
+}
+
+.group-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 26px;
+  border: 1px solid var(--line);
+  border-radius: 28px !important;
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--shadow-soft);
 }
 
-#groupsAccordion .accordion-body .card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+.group-trigger:not(.collapsed) {
+  color: var(--text-primary);
+  background:
+    linear-gradient(135deg, rgba(23, 182, 157, 0.16), rgba(255, 255, 255, 0.04));
+  box-shadow: var(--shadow-strong);
+}
+
+.group-trigger::after {
+  flex-shrink: 0;
+}
+
+.group-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.group-title {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.group-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent-soft);
+}
+
+.accordion-body {
+  padding: 18px 4px 0;
+}
+
+.student-card {
+  height: 100%;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top right, rgba(23, 182, 157, 0.1), transparent 26%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
 .avatar-wrapper {
-  width: 40px;
-  height: 40px;
+  width: 72px;
+  height: 72px;
   overflow: hidden;
-  border-radius: 50%;
-  display: inline-block;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
-.avatar-wrapper img {
+.student-avatar {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
-.card-body .btn {
-  font-size: 0.85rem;
+.student-meta {
+  min-width: 0;
+}
+
+.student-name {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.student-id {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.btn-student {
+  width: 100%;
+  min-height: 48px;
+}
+
+.student-details {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 
 .attendance-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .attendance-metric {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .attendance-metric-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #f0f6fc;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .attendance-metric-label {
-  font-size: 0.8rem;
   color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.attendance-section {
+  display: grid;
+  gap: 10px;
 }
 
 .attendance-section-title {
-  margin-bottom: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #c9d1d9;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
 }
 
 .attendance-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  gap: 10px;
 }
 
 .attendance-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.02);
-  color: #e6edf3;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .attendance-empty {
-  padding: 0.75rem;
-  border: 1px dashed var(--border-color);
-  border-radius: 0.75rem;
-  color: var(--text-secondary);
+  padding: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 18px;
   text-align: center;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-@media (max-width: 576px) {
+@media (max-width: 991.98px) {
+  .groups-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .page-intro-card,
+  .page-summary-card,
+  .group-trigger,
+  .student-card {
+    padding: 20px;
+  }
+
+  .page-summary-card,
   .attendance-summary-grid {
     grid-template-columns: 1fr;
   }
 
+  .group-trigger,
   .attendance-row {
     flex-direction: column;
     align-items: flex-start;

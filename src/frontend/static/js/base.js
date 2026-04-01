@@ -1,8 +1,13 @@
 function initBaseApp() {
-  updateClock();
-  setInterval(updateClock, 1000);
-  setInterval(loadAttendance, 2000);
-  loadAttendance();
+  if (document.getElementById("currentTime")) {
+    updateClock();
+    setInterval(updateClock, 1000);
+  }
+
+  if (document.getElementById("attendanceChart")) {
+    loadAttendance();
+    setInterval(loadAttendance, 2000);
+  }
 }
 
 if (document.readyState === "loading") {
@@ -15,48 +20,109 @@ function updateClock() {
   const now = new Date();
   const options = {
     weekday: "long",
-    year: "numeric",
+    day: "2-digit",
     month: "long",
-    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   };
-  const el = document.getElementById("currentTime");
-  if (el) el.innerText = now.toLocaleString("ru-RU", options);
+  const clock = document.getElementById("currentTime");
+  if (clock) {
+    clock.innerText = now.toLocaleString("ru-RU", options);
+  }
 }
 
 async function loadAttendance() {
   try {
-    const res = await fetch(`/logs`);
-    if (!res.ok) return;
-    const logs = await res.json();
-    const container = document.getElementById("attendanceChart");
-    if (!container) return;
+    const response = await fetch("/logs");
+    if (!response.ok) {
+      return;
+    }
 
-    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const logs = await response.json();
+    const container = document.getElementById("attendanceChart");
+    if (!container) {
+      return;
+    }
+
+    logs.sort((first, second) => new Date(second.timestamp) - new Date(first.timestamp));
+    updateMetrics(logs);
+
+    if (!logs.length) {
+      container.innerHTML = `
+        <div class="feed-empty">
+          Журнал пока пуст. Как только система зафиксирует ученика, записи появятся здесь.
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = logs
       .slice(0, 20)
-      .map((log) => {
-        const statusMeta =
-          log.status === "late"
-            ? { className: "bg-warning text-dark", label: "Опоздал" }
-            : { className: "bg-success", label: "Пришел" };
-        const engagementClass = `status-${log.engagement.toLowerCase()}`;
-
-        return `
-                <div class="p-3 border-bottom border-secondary-subtle d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-light">${log.student_name}</span>
-                    <div class="d-flex gap-2">
-                        <span class="badge ${statusMeta.className}">${statusMeta.label}</span>
-                        <span class="small ${engagementClass}">${log.engagement.toUpperCase()}</span>
-                        <span class="small text-secondary">${new Date(log.timestamp).toLocaleTimeString()}</span>
-                    </div>
-                </div>
-            `;
-      })
+      .map((log) => renderLogEntry(log))
       .join("");
-  } catch (e) {
-    console.error("Ошибка загрузки данных присутствия", e);
+  } catch (error) {
+    const container = document.getElementById("attendanceChart");
+    if (container) {
+      container.innerHTML = `
+        <div class="feed-empty">
+          Не удалось получить журнал. Проверьте backend и повторите позже.
+        </div>
+      `;
+    }
   }
+}
+
+function renderLogEntry(log) {
+  const statusMeta =
+    log.status === "late"
+      ? { className: "feed-pill-late", label: "Опоздал" }
+      : { className: "feed-pill-present", label: "Пришел" };
+  const timeLabel = new Date(log.timestamp).toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  return `
+    <article class="feed-entry">
+      <div class="feed-head">
+        <div>
+          <p class="feed-name">${escapeHtml(log.student_name || "Unknown")}</p>
+        </div>
+        <span class="feed-time">${timeLabel}</span>
+      </div>
+      <div class="feed-tags">
+        <span class="feed-pill feed-pill-status ${statusMeta.className}">
+          ${statusMeta.label}
+        </span>
+      </div>
+    </article>
+  `;
+}
+
+function updateMetrics(logs) {
+  setMetricValue(
+    "statPresent",
+    logs.filter((log) => log.status !== "late").length,
+  );
+  setMetricValue(
+    "statLate",
+    logs.filter((log) => log.status === "late").length,
+  );
+}
+
+function setMetricValue(id, value) {
+  const element = document.getElementById(id);
+  if (element) {
+    element.innerText = String(value);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

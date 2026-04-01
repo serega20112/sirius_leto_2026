@@ -60,11 +60,11 @@ function renderAttendance(studentId, payload) {
       </div>
       <div class="attendance-metric">
         <span class="attendance-metric-value">${summary.attended_days ?? 0}</span>
-        <span class="attendance-metric-label">Присутствовал</span>
+        <span class="attendance-metric-label">Был</span>
       </div>
       <div class="attendance-metric">
         <span class="attendance-metric-value">${summary.on_time_days ?? 0}</span>
-        <span class="attendance-metric-label">Вовремя</span>
+        <span class="attendance-metric-label">Без опозданий</span>
       </div>
       <div class="attendance-metric">
         <span class="attendance-metric-value">${summary.late_days ?? 0}</span>
@@ -72,11 +72,11 @@ function renderAttendance(studentId, payload) {
       </div>
       <div class="attendance-metric">
         <span class="attendance-metric-value">${summary.absent_days ?? 0}</span>
-        <span class="attendance-metric-label">Отсутствовал</span>
+        <span class="attendance-metric-label">Пропустил</span>
       </div>
       <div class="attendance-metric">
         <span class="attendance-metric-value">${summary.lesson_days ?? 0}</span>
-        <span class="attendance-metric-label">Учебных дней</span>
+        <span class="attendance-metric-label">Всего дней</span>
       </div>
     `,
   );
