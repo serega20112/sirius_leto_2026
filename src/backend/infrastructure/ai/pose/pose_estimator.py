@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import torch
 from typing import Dict, List, Optional, Tuple, Any
 
 
@@ -14,6 +15,7 @@ class PoseEstimator:
         """
         self.model: Any = None
         self.is_ultralytics: bool = False
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.input_size = (192, 256)
         try:
             try:
@@ -21,24 +23,28 @@ class PoseEstimator:
 
                 self.model = YOLO(model_path)
                 self.is_ultralytics = True
+                self.model.to(self.device)
             except Exception:
                 self.model = cv2.dnn.readNetFromONNX(model_path)
                 self.is_ultralytics = False
+                self._configure_opencv_backend()
         except Exception as e:
             print(f"Ошибка при загрузке модели оценки позы: {e}")
             self.model = None
             self.is_ultralytics = False
+        else:
+            print(f"[AI] YOLO pose device: {self.device}")
 
     def estimate_pose(self, frame: np.ndarray, bbox: List[int]) -> Optional[Dict]:
         """
-        Оценивает позу человека в заданном bounding box.
-
+        Estimates pose.
+        
         Args:
-            frame: Входной кадр в формате BGR.
-            bbox: Координаты bounding box [x1, y1, x2, y2].
-
+            frame: Input value for `frame`.
+            bbox: Input value for `bbox`.
+        
         Returns:
-            Optional[Dict]: Словарь с ключевыми точками или None при ошибке.
+            The computed or transformed result.
         """
         if self.model is None:
             return None
@@ -56,8 +62,11 @@ class PoseEstimator:
                 return None
             if self.is_ultralytics:
                 try:
-                    results = self.model(person_img)
-                    # explicit length check to avoid ambiguous truth value of Results
+                    results = self.model(
+                        person_img,
+                        verbose=False,
+                        device=self.device,
+                    )
                     if hasattr(results, "__len__") and len(results) == 0:
                         return {"keypoints": [], "bbox": bbox}
                     result = results[0]
@@ -80,43 +89,54 @@ class PoseEstimator:
 
     def _process_output(self, output: Any, offset: Tuple[int, int]) -> List[Dict]:
         """
-        Обрабатывает выход модели в ключевые точки.
-
+        Runs the internal step process output.
+        
         Args:
-            output: Выход модели.
-            offset: Смещение координат (x, y) для перевода в координаты исходного изображения.
-
+            output: Input value for `output`.
+            offset: Input value for `offset`.
+        
         Returns:
-            List[Dict]: Список ключевых точек с координатами и уверенностью.
+            The function result.
         """
         ox, oy = offset
         keypoints: List[Dict] = []
         try:
             if hasattr(output, "keypoints"):
                 kps = output.keypoints
-                try:
-                    arr = np.asarray(kps)
-                except Exception:
-                    try:
-                        arr = kps.xy
-                    except Exception:
-                        arr = None
-                if arr is None:
+                xy = getattr(kps, "xy", None)
+                if xy is None:
                     return []
-                arr = np.array(arr)
-                if arr.ndim == 2:
-                    for kp in arr:
-                        if kp.size >= 2:
-                            x, y = float(kp[0]) + ox, float(kp[1]) + oy
-                            conf = float(kp[2]) if kp.size > 2 else 1.0
-                            keypoints.append({"x": x, "y": y, "conf": conf})
-                elif arr.ndim == 3:
-                    arr = arr.reshape(-1, arr.shape[-1])
-                    for kp in arr:
-                        if kp.size >= 2:
-                            x, y = float(kp[0]) + ox, float(kp[1]) + oy
-                            conf = float(kp[2]) if kp.size > 2 else 1.0
-                            keypoints.append({"x": x, "y": y, "conf": conf})
+
+                xy_array = self._to_numpy(xy)
+                if xy_array is None or xy_array.size == 0:
+                    return []
+
+                conf = getattr(kps, "conf", None)
+                conf_array = self._to_numpy(conf) if conf is not None else None
+
+                if xy_array.ndim == 2:
+                    xy_array = np.expand_dims(xy_array, axis=0)
+                if conf_array is not None and conf_array.ndim == 1:
+                    conf_array = np.expand_dims(conf_array, axis=0)
+
+                points = xy_array[0]
+                confidences = conf_array[0] if conf_array is not None else None
+                for index, point in enumerate(points):
+                    if len(point) < 2:
+                        continue
+
+                    point_confidence = (
+                        float(confidences[index])
+                        if confidences is not None and index < len(confidences)
+                        else 1.0
+                    )
+                    keypoints.append(
+                        {
+                            "x": float(point[0]) + ox,
+                            "y": float(point[1]) + oy,
+                            "conf": point_confidence,
+                        }
+                    )
                 return keypoints
             if isinstance(output, np.ndarray):
                 return []
@@ -127,3 +147,44 @@ class PoseEstimator:
                 return []
         except Exception:
             return []
+
+    @staticmethod
+    def _to_numpy(value: Any) -> Optional[np.ndarray]:
+        """
+        Converts tensor-like objects to a detached numpy array.
+
+        Args:
+            value: Tensor-like object returned by the backend.
+
+        Returns:
+            A numpy array or `None` when conversion is not possible.
+        """
+        if value is None:
+            return None
+
+        if hasattr(value, "detach"):
+            return value.detach().cpu().numpy()
+
+        try:
+            return np.asarray(value)
+        except Exception:
+            return None
+
+    def _configure_opencv_backend(self) -> None:
+        """
+        Configures the OpenCV DNN backend for the available device.
+
+        Args:
+            None.
+
+        Returns:
+            Does not return a value.
+        """
+        if self.model is None or self.device != "cuda":
+            return
+
+        try:
+            self.model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+            self.model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        except Exception as error:
+            print(f"[AI] OpenCV DNN CUDA init error: {error}")

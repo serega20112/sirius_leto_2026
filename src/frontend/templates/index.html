@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <title>Панель Преподавателя | AI School</title>
 
-    <!-- Bootstrap CSS CDN -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -14,7 +13,6 @@
       rel="stylesheet"
     />
 
-    <!-- Локальные стили через Flask static -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/base.css') }}"
@@ -23,7 +21,6 @@
   <body>
     <div class="container-fluid">
       <div class="row">
-        <!-- Sidebar -->
         <nav class="col-md-2 d-none d-md-block sidebar shadow">
           <div class="position-sticky pt-3 px-3">
             <h5 class="text-primary fw-bold">AI ШКОЛА</h5>
@@ -43,7 +40,6 @@
           </div>
         </nav>
 
-        <!-- Main content -->
         <main class="col-md-10 ms-sm-auto px-md-4 py-4">
           {% if request.path == '/' %}
           <h5 class="mb-3">Видеопоток с камеры</h5>
@@ -60,7 +56,6 @@
       </div>
     </div>
 
-    <!-- Bootstrap JS Bundle CDN -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
   </body>

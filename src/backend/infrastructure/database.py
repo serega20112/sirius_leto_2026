@@ -1,4 +1,3 @@
-# src/backend/infrastructure/database.py
 import os
 from datetime import datetime
 from pathlib import Path
@@ -33,6 +32,15 @@ class StudentModel(Base):
     logs = relationship("AttendanceModel", back_populates="student", cascade="all, delete-orphan")
 
     def to_domain(self) -> Student:
+        """
+        Runs the operation to domain.
+        
+        Args:
+            None.
+        
+        Returns:
+            The function result.
+        """
         return Student(
             id=self.id,
             name=self.name,
@@ -43,6 +51,15 @@ class StudentModel(Base):
 
     @classmethod
     def from_domain(cls, student: Student) -> "StudentModel":
+        """
+        Runs the operation from domain.
+        
+        Args:
+            student: Input value for `student`.
+        
+        Returns:
+            The function result.
+        """
         return cls(
             id=student.id,
             name=student.name,
@@ -64,4 +81,13 @@ class AttendanceModel(Base):
     student = relationship("StudentModel", back_populates="logs")
 
 def init_db():
+    """
+    Runs the operation init db.
+    
+    Args:
+        None.
+    
+    Returns:
+        The function result.
+    """
     Base.metadata.create_all(bind=engine)

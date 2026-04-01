@@ -10,6 +10,15 @@ class PersonDetector:
         print(f"[AI] YOLO detector device: {self.device}")
 
     def track_people(self, frame):
+        """
+        Tracks people.
+        
+        Args:
+            frame: Input value for `frame`.
+        
+        Returns:
+            The computed or transformed result.
+        """
         results = self.model.track(
             frame,
             persist=True,

@@ -4,6 +4,16 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 def draw_overlays(frame, tracking_result):
+    """
+    Draws overlays.
+    
+    Args:
+        frame: Input value for `frame`.
+        tracking_result: Input value for `tracking_result`.
+    
+    Returns:
+        The computed or transformed result.
+    """
     students = tracking_result.get("students", [])
     h, w = frame.shape[:2]
 
@@ -12,7 +22,6 @@ def draw_overlays(frame, tracking_result):
         name = student.get("name", "Unknown")
         engagement = student.get("engagement", "unknown")
 
-        # безопасная проверка bbox
         if bbox is None:
             continue
         try:
@@ -29,16 +38,16 @@ def draw_overlays(frame, tracking_result):
             continue
 
         if name == "Unknown" or name is None:
-            color = (0, 0, 255)  # red for unknown
+            color = (0, 0, 255)
         else:
             if engagement == "high":
-                color = (0, 255, 0)  # green
+                color = (0, 255, 0)
             elif engagement == "medium":
-                color = (0, 255, 255)  # yellow
+                color = (0, 255, 255)
             elif engagement == "low":
-                color = (0, 0, 255)  # red
+                color = (0, 0, 255)
             else:
-                color = (255, 255, 255)  # white for unknown engagement
+                color = (255, 255, 255)
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
 
@@ -49,6 +58,18 @@ def draw_overlays(frame, tracking_result):
 
 
 def draw_russian_text(img, text, position, color):
+    """
+    Draws russian text.
+    
+    Args:
+        img: Input value for `img`.
+        text: Input value for `text`.
+        position: Input value for `position`.
+        color: Input value for `color`.
+    
+    Returns:
+        The computed or transformed result.
+    """
     img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img_pil)
     font_path = "C:\\Windows\\Fonts\\arial.ttf"

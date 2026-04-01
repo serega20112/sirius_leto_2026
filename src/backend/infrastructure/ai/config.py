@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import time
 
 
 @dataclass(frozen=True)
@@ -6,6 +7,12 @@ class FaceRecognitionConfig:
     model_name: str = "Facenet512"
     detector_backend: str = "retinaface"
     normalization: str = "Facenet2018"
+    runtime_backend: str = "auto"
+    device: str = "auto"
+    embedding_model_name: str = "vggface2"
+    embedding_image_size: int = 160
+    embedding_margin: int = 0
+    min_face_confidence: float = 0.80
     distance_threshold: float = 0.50
     min_margin: float = 0.02
     min_face_size: int = 80
@@ -34,3 +41,4 @@ class AttendanceTrackingConfig:
     stale_track_ttl_seconds: float = 10.0
     face_crop_width_ratio: float = 0.7
     face_crop_height_ratio: float = 0.5
+    lesson_start_time: time = time(9, 0)

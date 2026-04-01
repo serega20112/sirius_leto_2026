@@ -1,50 +1,146 @@
-const charts = {};
+const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
 
 function toggleDetails(id) {
   const el = document.getElementById(`details-${id}`);
   if (!el) return;
+  const shouldLoad = el.classList.contains("d-none");
   el.classList.toggle("d-none");
-  if (!el.classList.contains("d-none"))
-    setTimeout(() => initStudentChart(id), 100);
+  if (shouldLoad) {
+    loadStudentAttendance(id);
+  }
 }
 
-function updateStatus(studentId, action) {
-  fetch("/monitor/manual_status", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ student_id: studentId, action }),
-  })
-    .then(() => alert("Статус обновлен"))
-    .catch(() => alert("Ошибка соединения"));
+async function loadStudentAttendance(studentId) {
+  renderLoadingState(studentId);
+
+  try {
+    const response = await fetch(`/students/${studentId}/attendance`);
+    if (!response.ok) {
+      throw new Error("request_failed");
+    }
+
+    const payload = await response.json();
+    renderAttendance(studentId, payload);
+  } catch (error) {
+    renderErrorState(studentId);
+  }
 }
 
-function initStudentChart(id) {
-  const ctx = document.getElementById(`chart-${id}`);
-  if (!ctx || charts[id]) return;
-
-  charts[id] = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: ["10:00", "10:15", "10:30", "10:45", "11:00"],
-      datasets: [
-        {
-          label: "Вовлеченность",
-          data: [1, 2, 2, 1, 2],
-          borderColor: "#58a6ff",
-          backgroundColor: "rgba(88,166,255,0.2)",
-          fill: true,
-          tension: 0.4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { display: false, min: 0, max: 2 }, x: { display: false } },
-    },
-  });
+function renderLoadingState(studentId) {
+  setElementHtml(
+    `attendance-summary-${studentId}`,
+    '<div class="attendance-empty">Загружаю статистику...</div>',
+  );
+  setElementHtml(`late-list-${studentId}`, "");
+  setElementHtml(`absent-list-${studentId}`, "");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  // все группы уже есть, ничего дополнительно не грузим
-});
+function renderErrorState(studentId) {
+  setElementHtml(
+    `attendance-summary-${studentId}`,
+    '<div class="attendance-empty">Не удалось загрузить посещаемость.</div>',
+  );
+  setElementHtml(`late-list-${studentId}`, "");
+  setElementHtml(`absent-list-${studentId}`, "");
+}
+
+function renderAttendance(studentId, payload) {
+  const summary = payload.summary || {};
+
+  setElementHtml(
+    `attendance-summary-${studentId}`,
+    `
+      <div class="attendance-metric">
+        <span class="attendance-metric-value">${summary.attendance_rate ?? 0}%</span>
+        <span class="attendance-metric-label">Посещаемость</span>
+      </div>
+      <div class="attendance-metric">
+        <span class="attendance-metric-value">${summary.attended_days ?? 0}</span>
+        <span class="attendance-metric-label">Присутствовал</span>
+      </div>
+      <div class="attendance-metric">
+        <span class="attendance-metric-value">${summary.on_time_days ?? 0}</span>
+        <span class="attendance-metric-label">Вовремя</span>
+      </div>
+      <div class="attendance-metric">
+        <span class="attendance-metric-value">${summary.late_days ?? 0}</span>
+        <span class="attendance-metric-label">Опоздал</span>
+      </div>
+      <div class="attendance-metric">
+        <span class="attendance-metric-value">${summary.absent_days ?? 0}</span>
+        <span class="attendance-metric-label">Отсутствовал</span>
+      </div>
+      <div class="attendance-metric">
+        <span class="attendance-metric-value">${summary.lesson_days ?? 0}</span>
+        <span class="attendance-metric-label">Учебных дней</span>
+      </div>
+    `,
+  );
+
+  renderLateList(studentId, payload.late_arrivals || []);
+  renderAbsenceList(studentId, payload.absences || []);
+}
+
+function renderLateList(studentId, lateArrivals) {
+  if (!lateArrivals.length) {
+    setElementHtml(
+      `late-list-${studentId}`,
+      '<div class="attendance-empty">Опозданий пока нет.</div>',
+    );
+    return;
+  }
+
+  setElementHtml(
+    `late-list-${studentId}`,
+    lateArrivals
+      .map(
+        (item) => `
+          <div class="attendance-row">
+            <span>${formatDate(item.date)}</span>
+            <span class="badge text-bg-warning">Пришел в ${item.arrived_at}</span>
+          </div>
+        `,
+      )
+      .join(""),
+  );
+}
+
+function renderAbsenceList(studentId, absences) {
+  if (!absences.length) {
+    setElementHtml(
+      `absent-list-${studentId}`,
+      '<div class="attendance-empty">Пропусков пока нет.</div>',
+    );
+    return;
+  }
+
+  setElementHtml(
+    `absent-list-${studentId}`,
+    absences
+      .map(
+        (item) => `
+          <div class="attendance-row">
+            <span>${formatDate(item.date)}</span>
+            <span class="badge text-bg-danger">Отсутствовал</span>
+          </div>
+        `,
+      )
+      .join(""),
+  );
+}
+
+function setElementHtml(id, html) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.innerHTML = html;
+  }
+}
+
+function formatDate(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return dateFormatter.format(new Date(year, month - 1, day));
+}

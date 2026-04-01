@@ -33,21 +33,22 @@ async function loadAttendance() {
     const container = document.getElementById("attendanceChart");
     if (!container) return;
 
-    // Сортируем по времени (последние события сверху)
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     container.innerHTML = logs
       .slice(0, 20)
       .map((log) => {
-        const statusClass =
-          log.status === "present" ? "bg-success" : "bg-danger";
+        const statusMeta =
+          log.status === "late"
+            ? { className: "bg-warning text-dark", label: "Опоздал" }
+            : { className: "bg-success", label: "Пришел" };
         const engagementClass = `status-${log.engagement.toLowerCase()}`;
 
         return `
                 <div class="p-3 border-bottom border-secondary-subtle d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-light">${log.student_name}</span>
                     <div class="d-flex gap-2">
-                        <span class="badge ${statusClass}">${log.status === "present" ? "Пришел" : "Ушел"}</span>
+                        <span class="badge ${statusMeta.className}">${statusMeta.label}</span>
                         <span class="small ${engagementClass}">${log.engagement.toUpperCase()}</span>
                         <span class="small text-secondary">${new Date(log.timestamp).toLocaleTimeString()}</span>
                     </div>

@@ -15,7 +15,6 @@ body {
   margin: 0;
 }
 
-/* Ссылки в навигации */
 a.nav-link {
   color: var(--text-muted);
   transition: color 0.2s;
@@ -26,7 +25,6 @@ a.nav-link:hover,
   font-weight: bold;
 }
 
-/* Сайдбар фиксированный */
 .sidebar {
   background-color: var(--bg-card);
   border-right: 1px solid var(--border-color);
@@ -38,16 +36,14 @@ a.nav-link:hover,
   overflow-y: auto;
 }
 
-/* Основной контент справа от сайдбара */
 .main {
-  margin-left: 16.6667%; /* ширина col-md-2 */
+  margin-left: 16.6667%;
   padding: 2rem 1.5rem;
 }
 
-/* Видеопоток */
 .video-container {
   width: 100%;
-  max-width: 1000px; /* можно увеличить */
+  max-width: 1000px;
   margin: 0 auto 2rem auto;
 }
 #videoStream {
@@ -59,7 +55,6 @@ a.nav-link:hover,
   border-radius: 12px;
 }
 
-/* Карточки */
 .card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -71,13 +66,11 @@ a.nav-link:hover,
   border-bottom: 1px solid var(--border-color);
 }
 
-/* Скролл */
 .scroll-area {
   max-height: 600px;
   overflow-y: auto;
 }
 
-/* Анимация */
 .pulse {
   animation: pulse-red 2s infinite;
 }
@@ -93,7 +86,6 @@ a.nav-link:hover,
   }
 }
 
-/* Статусы */
 .status-high {
   color: #3fb950;
   font-weight: bold;
@@ -107,7 +99,6 @@ a.nav-link:hover,
   font-weight: bold;
 }
 
-/* Стили скроллбара */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -119,7 +110,6 @@ a.nav-link:hover,
   border-radius: 10px;
 }
 
-/* Адаптив */
 @media (max-width: 767.98px) {
   .sidebar {
     position: relative;

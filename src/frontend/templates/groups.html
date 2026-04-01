@@ -43,30 +43,25 @@
                   class="btn btn-sm btn-outline-primary w-100 mb-2"
                   onclick="toggleDetails('{{ s.id }}')"
                 >
-                  <i class="bi bi-graph-up"></i> Статистика
+                  <i class="bi bi-calendar-check"></i> Посещаемость
                 </button>
                 <div
                   id="details-{{ s.id }}"
                   class="d-none mt-3 border-top border-secondary pt-3"
                 >
-                  <canvas
-                    id="chart-{{ s.id }}"
-                    class="mb-3"
-                    height="100"
-                  ></canvas>
-                  <div class="d-flex gap-2">
-                    <button
-                      class="btn btn-sm btn-success flex-grow-1"
-                      onclick="updateStatus('{{ s.id }}', 'present')"
-                    >
-                      Пришел
-                    </button>
-                    <button
-                      class="btn btn-sm btn-danger flex-grow-1"
-                      onclick="updateStatus('{{ s.id }}', 'absent')"
-                    >
-                      Ушел
-                    </button>
+                  <div
+                    id="attendance-summary-{{ s.id }}"
+                    class="attendance-summary-grid mb-3"
+                  >
+                    <div class="attendance-empty">Загрузка статистики...</div>
+                  </div>
+                  <div class="attendance-section mb-3">
+                    <div class="attendance-section-title">Опоздания</div>
+                    <div id="late-list-{{ s.id }}" class="attendance-list"></div>
+                  </div>
+                  <div class="attendance-section">
+                    <div class="attendance-section-title">Пропуски</div>
+                    <div id="absent-list-{{ s.id }}" class="attendance-list"></div>
                   </div>
                 </div>
               </div>
@@ -81,6 +76,5 @@
 </div>
 
 <link rel="stylesheet" href="/static/css/groups.css" />
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/static/js/groups.js"></script>
 {% endblock %}
