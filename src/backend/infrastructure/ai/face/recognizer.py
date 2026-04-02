@@ -463,7 +463,6 @@ class FaceRecognizer:
                     detector_backend=backend,
                     enforce_detection=False,
                     align=True,
-                    normalize_face=False,
                 )
             except Exception as error:
                 print(f"[AI] DeepFace detect error ({backend}): {error}")
