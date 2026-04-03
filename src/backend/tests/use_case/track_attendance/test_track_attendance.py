@@ -266,6 +266,56 @@ def test_execute_logs_student_again_on_new_day():
     attendance_repo.add_log.assert_called_once()
 
 
+def test_execute_builds_larger_display_bbox_from_face():
+    """
+    Verifies scenario execute builds larger display bbox from face.
+
+    Args:
+        None.
+
+    Returns:
+        Does not return a value.
+    """
+    detector = MagicMock()
+    detector.track_people.return_value = [{"bbox": [60, 40, 160, 200], "track_id": 4}]
+
+    recognizer = MagicMock()
+    recognizer.detect_faces.return_value = [
+        {
+            "bbox": [80, 50, 140, 120],
+            "crop": np.zeros((70, 60, 3), dtype=np.uint8),
+            "confidence": 1.0,
+        }
+    ]
+    recognizer.recognize.return_value = "student-4"
+
+    pose_estimator = MagicMock()
+    pose_estimator.estimate_engagement.return_value = "medium"
+
+    student_repo = MagicMock()
+    student_repo.find_by_id.return_value = SimpleNamespace(
+        id="student-4",
+        name="Alice",
+    )
+
+    use_case = _build_use_case(
+        detector=detector,
+        recognizer=recognizer,
+        pose_estimator=pose_estimator,
+        student_repo=student_repo,
+        config=AttendanceTrackingConfig(presence_confirmation_seconds=999.0),
+    )
+
+    frame = np.zeros((240, 240, 3), dtype=np.uint8)
+    result = use_case.execute(frame)
+
+    display_bbox = result["students"][0]["display_bbox"]
+    assert display_bbox[0] < 60
+    assert display_bbox[1] < 40
+    assert display_bbox[2] > 160
+    assert display_bbox[3] > 200
+
+
 def test_log_visit_uses_lesson_start_time_for_late_mark():
     """
     Verifies scenario log visit uses lesson start time for late mark.

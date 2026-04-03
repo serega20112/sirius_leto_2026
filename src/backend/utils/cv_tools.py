@@ -18,7 +18,7 @@ def draw_overlays(frame, tracking_result):
     h, w = frame.shape[:2]
 
     for student in students:
-        bbox = student.get("bbox")
+        bbox = student.get("display_bbox") or student.get("bbox")
         name = student.get("name", "Unknown")
         engagement = student.get("engagement", "unknown")
 

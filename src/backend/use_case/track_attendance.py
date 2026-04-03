@@ -121,6 +121,7 @@ class TrackAttendanceUseCase:
             final_results.append(
                 {
                     "bbox": bbox,
+                    "display_bbox": self._build_display_bbox(frame, bbox, matched_face),
                     "name": student_name,
                     "engagement": engagement,
                     "track_id": tid,
@@ -323,6 +324,105 @@ class TrackAttendanceUseCase:
 
         return frame[crop_y1:crop_y2, crop_x1:crop_x2]
 
+    def _build_display_bbox(self, frame, bbox, matched_face: dict | None) -> list[int]:
+        """
+        Builds a larger bbox for drawing so the frame surrounds the student
+        more naturally on frontal and close camera shots.
+
+        Args:
+            frame: Current frame.
+            bbox: Tracker bbox.
+            matched_face: Matched face metadata when available.
+
+        Returns:
+            A sanitized bbox that should be used for drawing overlays.
+        """
+        expanded_bbox = self._expand_bbox(
+            frame,
+            bbox,
+            left_ratio=0.18,
+            top_ratio=0.12,
+            right_ratio=0.18,
+            bottom_ratio=0.18,
+        )
+        if matched_face is None:
+            return expanded_bbox
+
+        face_bbox = self._sanitize_bbox(frame, matched_face.get("bbox"))
+        if face_bbox is None:
+            return expanded_bbox
+
+        portrait_bbox = self._build_portrait_bbox_from_face(frame, face_bbox)
+        return self._merge_bboxes(expanded_bbox, portrait_bbox)
+
+    def _build_portrait_bbox_from_face(self, frame, face_bbox) -> list[int]:
+        """
+        Builds a portrait-style bbox around a detected face to better frame
+        a student when the camera is close and the full body is not visible.
+
+        Args:
+            frame: Current frame.
+            face_bbox: Sanitized face bbox.
+
+        Returns:
+            Expanded portrait-style bbox.
+        """
+        fx1, fy1, fx2, fy2 = face_bbox
+        face_width = max(1, fx2 - fx1)
+        face_height = max(1, fy2 - fy1)
+
+        portrait_width = int(face_width * 2.6)
+        portrait_height = int(face_height * 4.8)
+        center_x = (fx1 + fx2) // 2
+        top = fy1 - int(face_height * 0.35)
+
+        return self._sanitize_bbox(
+            frame,
+            [
+                center_x - portrait_width // 2,
+                top,
+                center_x + portrait_width // 2,
+                top + portrait_height,
+            ],
+        ) or list(face_bbox)
+
+    def _expand_bbox(
+        self,
+        frame,
+        bbox,
+        *,
+        left_ratio: float,
+        top_ratio: float,
+        right_ratio: float,
+        bottom_ratio: float,
+    ) -> list[int]:
+        """
+        Expands bbox edges by configurable ratios and clamps them to the frame.
+
+        Args:
+            frame: Current frame.
+            bbox: Source bbox.
+            left_ratio: Left expansion ratio.
+            top_ratio: Top expansion ratio.
+            right_ratio: Right expansion ratio.
+            bottom_ratio: Bottom expansion ratio.
+
+        Returns:
+            Expanded bbox.
+        """
+        x1, y1, x2, y2 = bbox
+        width = max(1, x2 - x1)
+        height = max(1, y2 - y1)
+        return self._sanitize_bbox(
+            frame,
+            [
+                x1 - int(width * left_ratio),
+                y1 - int(height * top_ratio),
+                x2 + int(width * right_ratio),
+                y2 + int(height * bottom_ratio),
+            ],
+        ) or list(bbox)
+
     @staticmethod
     def _intersection_over_face_area(first_bbox, second_bbox) -> float:
         """
@@ -349,6 +449,54 @@ class TrackAttendanceUseCase:
         intersection = float((inter_x2 - inter_x1) * (inter_y2 - inter_y1))
         face_area = float(max(1, (bx2 - bx1) * (by2 - by1)))
         return intersection / face_area
+
+    @staticmethod
+    def _merge_bboxes(first_bbox, second_bbox) -> list[int]:
+        """
+        Merges two bbox rectangles into one bbox containing both.
+
+        Args:
+            first_bbox: First bbox.
+            second_bbox: Second bbox.
+
+        Returns:
+            Bounding box containing both inputs.
+        """
+        return [
+            min(first_bbox[0], second_bbox[0]),
+            min(first_bbox[1], second_bbox[1]),
+            max(first_bbox[2], second_bbox[2]),
+            max(first_bbox[3], second_bbox[3]),
+        ]
+
+    @staticmethod
+    def _sanitize_bbox(frame, bbox) -> list[int] | None:
+        """
+        Clamps bbox coordinates to the current frame.
+
+        Args:
+            frame: Current frame.
+            bbox: Source bbox.
+
+        Returns:
+            Sanitized bbox or `None`.
+        """
+        if bbox is None:
+            return None
+
+        try:
+            x1, y1, x2, y2 = map(int, bbox)
+        except Exception:
+            return None
+
+        height, width = frame.shape[:2]
+        x1 = max(0, min(x1, width - 1))
+        x2 = max(0, min(x2, width))
+        y1 = max(0, min(y1, height - 1))
+        y2 = max(0, min(y2, height))
+        if x2 <= x1 or y2 <= y1:
+            return None
+        return [x1, y1, x2, y2]
 
     def _cleanup_stale_tracks(self, now: datetime) -> None:
         """
