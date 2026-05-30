@@ -11,10 +11,10 @@ from src.backend.domain.student.entity import Student
 def mock_session():
     """
     Verifies scenario mock session.
-    
+
     Args:
         None.
-    
+
     Returns:
         The function result.
     """
@@ -25,10 +25,10 @@ def mock_session():
 def mock_attendance_log():
     """
     Verifies scenario mock attendance log.
-    
+
     Args:
         None.
-    
+
     Returns:
         The function result.
     """
@@ -45,10 +45,10 @@ def mock_attendance_log():
 def mock_student():
     """
     Verifies scenario mock student.
-    
+
     Args:
         None.
-    
+
     Returns:
         The function result.
     """

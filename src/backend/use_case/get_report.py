@@ -11,10 +11,10 @@ class GetReportUseCase:
     def execute(self) -> List[Dict]:
         """
         Executes the main scenario for GetReportUseCase.
-        
+
         Args:
             None.
-        
+
         Returns:
             The scenario execution result.
         """

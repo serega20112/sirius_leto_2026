@@ -10,10 +10,10 @@ class GetGroupsUseCase:
     def execute(self) -> dict[str, list[Student]]:
         """
         Executes the main scenario for GetGroupsUseCase.
-        
+
         Args:
             None.
-        
+
         Returns:
             The scenario execution result.
         """
@@ -24,4 +24,6 @@ class GetGroupsUseCase:
         for students in grouped_students.values():
             students.sort(key=lambda student: student.name.casefold())
 
-        return dict(sorted(grouped_students.items(), key=lambda item: item[0].casefold()))
+        return dict(
+            sorted(grouped_students.items(), key=lambda item: item[0].casefold())
+        )

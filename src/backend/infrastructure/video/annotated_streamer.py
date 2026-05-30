@@ -1,6 +1,7 @@
 import time
 import traceback
 from pathlib import Path
+import threading
 
 import cv2
 import numpy as np
@@ -11,60 +12,166 @@ from src.backend.utils.cv_tools import draw_overlays
 
 
 class AnnotatedVideoStreamer:
-    """Инфраструктурный сервис видеопотока с AI-аннотациями."""
+    """Video streamer with background capture and lightweight inference scheduling.
+
+    The streamer keeps capture and inference in background threads so the web
+    response loop can continue delivering frames even when inference is slower.
+    """
 
     def __init__(self, track_attendance_use_case):
         self.track_attendance_use_case = track_attendance_use_case
 
+        self._latest_frame = None
+        self._annotated_frame = None
+        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._capture_thread = None
+        self._inference_thread = None
+
     def stream(self):
-        """
-        Streams operation.
-        
-        Args:
-            None.
-        
-        Returns:
-            A stream or generator with prepared data.
-        """
         source = getattr(settings, "CAMERA_SOURCE", 0)
 
         def generate():
-            """
-            Runs the operation generate.
-            
-            Args:
-                None.
-            
-            Returns:
-                A stream or generator with prepared data.
-            """
             cap = None
             try:
+                # start capture in background thread
                 cap = cv2.VideoCapture(
                     int(source)
                     if isinstance(source, (str, int)) and str(source).isdigit()
                     else source
                 )
+
                 if not cap.isOpened():
                     yield from self._fallback_image_generator()
                     return
 
-                retry = 0
-                while True:
-                    ret, frame = cap.read()
-                    if not ret or frame is None:
-                        retry += 1
-                        if retry > 10:
-                            print(
-                                "[Video] camera read failed repeatedly, switching to fallback image"
-                            )
-                            yield from self._fallback_image_generator()
-                            return
-                        time.sleep(0.05)
-                        continue
+                # apply requested resolution when possible
+                try:
+                    w = int(getattr(settings, "CAMERA_WIDTH", 0) or 0)
+                    h = int(getattr(settings, "CAMERA_HEIGHT", 0) or 0)
+                    if w > 0 and h > 0:
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+                except Exception:
+                    pass
+
+                # shared capture loop
+                def _capture_loop():
                     retry = 0
-                    yield self._encode_frame(self._annotate_frame(frame))
+                    while not self._stop_event.is_set():
+                        try:
+                            ret, frame = cap.read()
+                        except Exception:
+                            ret, frame = False, None
+
+                        if not ret or frame is None:
+                            retry += 1
+                            if retry > 10:
+                                print(
+                                    "[Video] camera read failed repeatedly, switching to fallback image"
+                                )
+                                self._stop_event.set()
+                                return
+                            time.sleep(0.05)
+                            continue
+
+                        retry = 0
+                        # resize to configured resolution to reduce CPU usage
+                        try:
+                            w = int(getattr(settings, "CAMERA_WIDTH", 0) or 0)
+                            h = int(getattr(settings, "CAMERA_HEIGHT", 0) or 0)
+                            if (
+                                w > 0
+                                and h > 0
+                                and (frame.shape[1], frame.shape[0]) != (w, h)
+                            ):
+                                frame = cv2.resize(
+                                    frame, (w, h), interpolation=cv2.INTER_AREA
+                                )
+                        except Exception:
+                            pass
+
+                        with self._lock:
+                            self._latest_frame = frame.copy()
+
+                # inference loop runs at configured INFERENCE_RATE
+                def _inference_loop():
+                    inference_rate = float(
+                        getattr(settings, "INFERENCE_RATE", 7.0) or 7.0
+                    )
+                    interval = 1.0 / max(0.0001, inference_rate)
+                    while not self._stop_event.is_set():
+                        frame = None
+                        with self._lock:
+                            if self._latest_frame is not None:
+                                frame = self._latest_frame.copy()
+                        if frame is None:
+                            time.sleep(0.01)
+                            continue
+
+                        if self.track_attendance_use_case:
+                            try:
+                                tracking_result = (
+                                    self.track_attendance_use_case.execute(frame)
+                                )
+                                if (
+                                    isinstance(tracking_result, dict)
+                                    and "students" in tracking_result
+                                ):
+                                    annotated = draw_overlays(
+                                        frame.copy(), tracking_result
+                                    )
+                                else:
+                                    annotated = frame.copy()
+                            except Exception as error:
+                                print(f"[Video] tracking error: {error}")
+                                annotated = frame.copy()
+                        else:
+                            annotated = frame.copy()
+
+                        with self._lock:
+                            self._annotated_frame = annotated
+                        time.sleep(interval)
+
+                # start background threads
+                self._stop_event.clear()
+                self._capture_thread = threading.Thread(
+                    target=_capture_loop, daemon=True
+                )
+                self._capture_thread.start()
+                self._inference_thread = threading.Thread(
+                    target=_inference_loop, daemon=True
+                )
+                self._inference_thread.start()
+
+                stream_fps = float(getattr(settings, "STREAM_FPS", 20.0) or 20.0)
+                stream_interval = 1.0 / max(0.0001, stream_fps)
+
+                # main loop yields the latest annotated frame when available, otherwise latest raw frame
+                while not self._stop_event.is_set():
+                    out_frame = None
+                    with self._lock:
+                        if self._annotated_frame is not None:
+                            out_frame = self._annotated_frame.copy()
+                        elif self._latest_frame is not None:
+                            out_frame = self._latest_frame.copy()
+
+                    if out_frame is None:
+                        time.sleep(0.01)
+                        continue
+
+                    yield self._encode_frame(out_frame)
+                    time.sleep(stream_interval)
+
             finally:
+                try:
+                    self._stop_event.set()
+                    if self._capture_thread is not None:
+                        self._capture_thread.join(timeout=0.5)
+                    if self._inference_thread is not None:
+                        self._inference_thread.join(timeout=0.5)
+                except Exception:
+                    pass
                 if cap is not None:
                     cap.release()
 
@@ -73,10 +180,10 @@ class AnnotatedVideoStreamer:
     def _fallback_image_generator(self):
         """
         Runs the internal step fallback image generator.
-        
+
         Args:
             None.
-        
+
         Returns:
             The function result.
         """
@@ -110,10 +217,10 @@ class AnnotatedVideoStreamer:
     def _annotate_frame(self, frame):
         """
         Runs the internal step annotate frame.
-        
+
         Args:
             frame: Input value for `frame`.
-        
+
         Returns:
             The function result.
         """
@@ -137,10 +244,10 @@ class AnnotatedVideoStreamer:
     def _encode_frame(frame):
         """
         Runs the internal step encode frame.
-        
+
         Args:
             frame: Input value for `frame`.
-        
+
         Returns:
             The function result.
         """
@@ -156,10 +263,10 @@ class AnnotatedVideoStreamer:
     def _read_image(path: Path):
         """
         Runs the internal step read image.
-        
+
         Args:
             path: Input value for `path`.
-        
+
         Returns:
             The function result.
         """
