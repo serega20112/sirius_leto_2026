@@ -14,11 +14,11 @@ class LocalFileStorage:
     def save_image(self, file_bytes: bytes, filename: str) -> str:
         """
         Saves image.
-        
+
         Args:
             file_bytes: Input value for `file_bytes`.
             filename: Input value for `filename`.
-        
+
         Returns:
             The result of the operation.
         """
@@ -32,10 +32,10 @@ class LocalFileStorage:
     def delete_image(self, filename: str) -> None:
         """
         Deletes image.
-        
+
         Args:
             filename: Input value for `filename`.
-        
+
         Returns:
             Does not return a value.
         """

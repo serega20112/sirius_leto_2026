@@ -1,48 +1,53 @@
 import cv2
 import numpy as np
-import torch
+import importlib
 from typing import Dict, List, Optional, Tuple, Any
 
 
 class PoseEstimator:
 
-    def __init__(self, model_path: str = "yolov8n-pose.pt"):
-        """
-        Инициализация оценщика позы.
+    def _detect_device(self) -> str:
+        """Detects best device to run pose estimator on (prefer CUDA if available)."""
+        try:
+            import importlib
 
-        Args:
-            model_path: Путь к модели для оценки позы.
+            torch = importlib.import_module("torch")
+            if getattr(torch, "cuda", None) and torch.cuda.is_available():
+                return "cuda"
+        except Exception:
+            pass
+        return "cpu"
+
+    def __init__(self, model_path: str = ""):
+        """Initialize pose estimator with lazy imports.
+
+        The class avoids importing heavy libraries at module import time so the
+        package can be imported on edge devices that do not have torch/ultralytics.
         """
         self.model: Any = None
         self.is_ultralytics: bool = False
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = self._detect_device()
         self.input_size = (192, 256)
-        try:
-            try:
-                from ultralytics import YOLO
 
-                self.model = YOLO(model_path)
-                self.is_ultralytics = True
-                self.model.to(self.device)
-            except Exception:
-                self.model = cv2.dnn.readNetFromONNX(model_path)
-                self.is_ultralytics = False
-                self._configure_opencv_backend()
-        except Exception as e:
-            print(f"Ошибка при загрузке модели оценки позы: {e}")
+        # YOLO/ultralytics/ONNX disabled for edge deployment.
+        # Rely on MediaPipe backends in higher-level code for lightweight pose estimation.
+        try:
             self.model = None
             self.is_ultralytics = False
-        else:
-            print(f"[AI] YOLO pose device: {self.device}")
+        except Exception as e:
+            print(f"Ошибка при инициализации pose estimator: {e}")
+            self.model = None
+            self.is_ultralytics = False
+        print("[AI] YOLO pose disabled; using MediaPipe-only pose estimator")
 
     def estimate_pose(self, frame: np.ndarray, bbox: List[int]) -> Optional[Dict]:
         """
         Estimates pose.
-        
+
         Args:
             frame: Input value for `frame`.
             bbox: Input value for `bbox`.
-        
+
         Returns:
             The computed or transformed result.
         """
@@ -90,11 +95,11 @@ class PoseEstimator:
     def _process_output(self, output: Any, offset: Tuple[int, int]) -> List[Dict]:
         """
         Runs the internal step process output.
-        
+
         Args:
             output: Input value for `output`.
             offset: Input value for `offset`.
-        
+
         Returns:
             The function result.
         """
@@ -163,7 +168,14 @@ class PoseEstimator:
             return None
 
         if hasattr(value, "detach"):
-            return value.detach().cpu().numpy()
+            try:
+                return value.detach().cpu().numpy()
+            except Exception:
+                try:
+                    # fallback for other tensor-like types
+                    return np.asarray(value)
+                except Exception:
+                    return None
 
         try:
             return np.asarray(value)

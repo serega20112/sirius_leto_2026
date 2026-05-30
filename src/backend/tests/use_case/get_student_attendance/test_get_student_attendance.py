@@ -12,12 +12,12 @@ from src.backend.use_case.get_student_attendance import GetStudentAttendanceUseC
 def _build_log(student_id: str, timestamp: datetime, *, is_late: bool) -> AttendanceLog:
     """
     Verifies scenario build log.
-    
+
     Args:
         student_id: Input value for `student_id`.
         timestamp: Input value for `timestamp`.
         is_late: Input value for `is_late`.
-    
+
     Returns:
         The function result.
     """
@@ -33,10 +33,10 @@ def _build_log(student_id: str, timestamp: datetime, *, is_late: bool) -> Attend
 def test_execute_builds_student_attendance_stats():
     """
     Verifies scenario execute builds student attendance stats.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -83,10 +83,10 @@ def test_execute_builds_student_attendance_stats():
 def test_execute_raises_for_unknown_student():
     """
     Verifies scenario execute raises for unknown student.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """

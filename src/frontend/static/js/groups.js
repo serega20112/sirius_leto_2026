@@ -81,6 +81,22 @@ function renderAttendance(studentId, payload) {
     `,
   );
 
+  // Update engagement badge if data is present
+  const badge = document.querySelector(
+    `.engagement-badge[data-student-id="${studentId}"]`,
+  );
+  if (badge && payload.engagement && payload.engagement.latest) {
+    const level = payload.engagement.latest.engagement_score || "unknown";
+    const levelMap = {
+      high: "Высокая",
+      medium: "Средняя",
+      low: "Низкая",
+      unknown: "Неизвестно",
+    };
+    badge.textContent = levelMap[level] || "Неизвестно";
+    badge.className = `engagement-badge ${level}`;
+  }
+
   renderLateList(studentId, payload.late_arrivals || []);
   renderAbsenceList(studentId, payload.absences || []);
 }

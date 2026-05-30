@@ -9,11 +9,11 @@ from src.backend.infrastructure.persistence.sqlite.student_repository import (
 def test_save_persists_student(mock_session, mock_student):
     """
     Verifies scenario save persists student.
-    
+
     Args:
         mock_session: Input value for `mock_session`.
         mock_student: Input value for `mock_student`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -28,10 +28,10 @@ def test_save_persists_student(mock_session, mock_student):
 def test_find_by_id_returns_domain_student(mock_session):
     """
     Verifies scenario find by id returns domain student.
-    
+
     Args:
         mock_session: Input value for `mock_session`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -50,10 +50,10 @@ def test_find_by_id_returns_domain_student(mock_session):
 def test_find_by_name_returns_domain_student(mock_session):
     """
     Verifies scenario find by name returns domain student.
-    
+
     Args:
         mock_session: Input value for `mock_session`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -72,10 +72,10 @@ def test_find_by_name_returns_domain_student(mock_session):
 def test_get_all_returns_domain_students(mock_session):
     """
     Verifies scenario get all returns domain students.
-    
+
     Args:
         mock_session: Input value for `mock_session`.
-    
+
     Returns:
         Does not return a value.
     """

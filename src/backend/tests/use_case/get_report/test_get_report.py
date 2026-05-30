@@ -8,10 +8,10 @@ from src.backend.use_case.get_report import GetReportUseCase
 def mock_dependencies():
     """
     Verifies scenario mock dependencies.
-    
+
     Args:
         None.
-    
+
     Returns:
         The function result.
     """
@@ -49,13 +49,13 @@ def mock_dependencies():
 def test_execute(mock_dependencies, attendance_exists, student_exists, expected_report):
     """
     Verifies scenario execute.
-    
+
     Args:
         mock_dependencies: Input value for `mock_dependencies`.
         attendance_exists: Input value for `attendance_exists`.
         student_exists: Input value for `student_exists`.
         expected_report: Input value for `expected_report`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -92,10 +92,10 @@ def test_execute(mock_dependencies, attendance_exists, student_exists, expected_
 def test_execute_returns_only_latest_log_per_student(mock_dependencies):
     """
     Verifies scenario execute returns only the newest log for one student.
-    
+
     Args:
         mock_dependencies: Input value for `mock_dependencies`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -117,7 +117,10 @@ def test_execute_returns_only_latest_log_per_student(mock_dependencies):
     newer_engagement.value = "low"
     newer_log.engagement_score = newer_engagement
 
-    mock_dependencies["attendance_repo"].get_all_logs.return_value = [older_log, newer_log]
+    mock_dependencies["attendance_repo"].get_all_logs.return_value = [
+        older_log,
+        newer_log,
+    ]
 
     student = MagicMock()
     student.id = "123"

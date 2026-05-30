@@ -1,6 +1,10 @@
 from datetime import date as date_type
 from datetime import datetime, timedelta
+import time
+from pathlib import Path
+import cv2
 
+from src.backend.dependencies import settings
 from src.backend.domain.attendance.entity import AttendanceLog, EngagementStatus
 from src.backend.infrastructure.ai.config import AttendanceTrackingConfig
 from src.backend.infrastructure.ai.contracts import (
@@ -33,6 +37,8 @@ class TrackAttendanceUseCase:
         self.log_cooldowns: dict[str, datetime] = {}
         self.track_last_seen: dict[int, datetime] = {}
         self.frame_count = 0
+        self.prev_gray = None
+        self.track_seen_frames: dict[int, int] = {}
 
         self.presence_tracker: dict[str, dict[str, datetime]] = {}
         self.marked_students: dict[str, date_type] = {}
@@ -40,10 +46,10 @@ class TrackAttendanceUseCase:
     def execute(self, frame):
         """
         Executes the main scenario for TrackAttendanceUseCase.
-        
+
         Args:
             frame: Input value for `frame`.
-        
+
         Returns:
             The scenario execution result.
         """
@@ -51,6 +57,11 @@ class TrackAttendanceUseCase:
         now = datetime.now()
         tracked_people = []
         detected_faces = self._detect_faces(frame)
+        # Debug: show how many faces were detected by face recognizer
+        try:
+            print(f"[Track] detected_faces: {len(detected_faces)}")
+        except Exception:
+            print(f"[Track] detected_faces: ?")
 
         try:
             if self.person_detector:
@@ -58,10 +69,99 @@ class TrackAttendanceUseCase:
         except Exception as e:
             print(f"[Track] person_detector error: {e}")
 
-        print(f"[Track] frame {self.frame_count} - tracked_people: {len(tracked_people)}")
+        # Debug: report last person detector backend (if available)
+        try:
+            if self.person_detector is not None:
+                backend = getattr(self.person_detector, "last_backend", None)
+                print(f"[Track] person_detector backend: {backend}")
+        except Exception:
+            pass
+
+        # Robustness fallback: if person detector found nothing but faces are present,
+        # create virtual tracks from faces to ensure we don't miss students.
+        if not tracked_people and detected_faces and self.person_detector:
+            print(
+                f"[Track] fallback: injecting {len(detected_faces)} faces as person tracks"
+            )
+            h, w = frame.shape[:2]
+            face_rects = []
+            for face in detected_faces:
+                fx1, fy1, fx2, fy2 = face["bbox"]
+                # Use the same expansion logic as the detector if possible, or simple expansion
+                if hasattr(self.person_detector, "_expand_face_to_person"):
+                    rect = self.person_detector._expand_face_to_person(
+                        w, h, fx1, fy1, fx2, fy2
+                    )
+                    if rect:
+                        face_rects.append(rect)
+                else:
+                    face_rects.append([fx1, max(0, fy1 - 20), fx2, min(h, fy2 + 100)])
+
+            if face_rects:
+                tracked_people = self.person_detector.tracker.update(face_rects)
+                # Mark these as coming from face fallback
+                for p in tracked_people:
+                    p["detector_backend"] = "face_fallback"
+
+        print(
+            f"[Track] frame {self.frame_count} - tracked_people: {len(tracked_people)}"
+        )
+
+        # Debug: optionally save failing frames to disk for offline inspection
+        try:
+            if (
+                len(tracked_people) == 0
+                and (not detected_faces)
+                and getattr(settings, "DEBUG_SAVE_FAILING_FRAMES", False)
+            ):
+                debug_dir = getattr(settings, "DEBUG_SAVE_DIR", None)
+                if debug_dir is not None:
+                    try:
+                        debug_dir.mkdir(parents=True, exist_ok=True)
+                        fname = (
+                            debug_dir
+                            / f"track_fail_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+                        )
+                        cv2.imwrite(str(fname), frame)
+                        print(f"[Track] saved failing frame to {fname}")
+                    except Exception as e:
+                        print(f"[Track] failed to save failing frame: {e}")
+        except Exception:
+            pass
 
         final_results = []
         h, w = frame.shape[:2]
+
+        # prepare grayscale for motion detection
+        try:
+            current_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        except Exception:
+            current_gray = None
+
+        min_confirm = int(getattr(settings, "MIN_TRACK_CONFIRMED_FRAMES", 2))
+        motion_diff_thr = int(getattr(settings, "MOTION_DIFF_THRESHOLD", 20))
+        motion_min_ratio = float(getattr(settings, "MOTION_MIN_ACTIVITY_RATIO", 0.02))
+
+        # update per-track seen counts
+        seen_ids = set()
+        for p in tracked_people:
+            tid_local = p.get("track_id")
+            if tid_local is None:
+                continue
+            seen_ids.add(tid_local)
+            self.track_seen_frames[tid_local] = (
+                self.track_seen_frames.get(tid_local, 0) + 1
+            )
+
+        # prune unseen track counters (keep small state)
+        for old_tid in list(self.track_seen_frames.keys()):
+            if old_tid not in seen_ids:
+                # decrement and remove if stale
+                self.track_seen_frames[old_tid] = max(
+                    0, self.track_seen_frames[old_tid] - 1
+                )
+                if self.track_seen_frames[old_tid] <= 0:
+                    self.track_seen_frames.pop(old_tid, None)
 
         for person in tracked_people:
             raw_bbox = person.get("bbox")
@@ -83,6 +183,37 @@ class TrackAttendanceUseCase:
             self.track_last_seen[tid] = now
             matched_face = self._match_face_to_person(bbox, detected_faces)
 
+            # compute simple motion score between previous and current gray frame
+            motion_score = 0.0
+            try:
+                if current_gray is not None and self.prev_gray is not None:
+                    mg = current_gray[y1:y2, x1:x2]
+                    pg = self.prev_gray[y1:y2, x1:x2]
+                    if mg.size == pg.size and mg.size > 0:
+                        diff = cv2.absdiff(mg, pg)
+                        _, th = cv2.threshold(
+                            diff, motion_diff_thr, 255, cv2.THRESH_BINARY
+                        )
+                        motion_score = float(cv2.countNonZero(th)) / float(
+                            max(1, th.size)
+                        )
+            except Exception:
+                motion_score = 0.0
+
+            # require either face or motion or minimum confirmed frames to accept a track
+            seen_count = int(self.track_seen_frames.get(tid, 0))
+            if (
+                matched_face is None
+                and motion_score < motion_min_ratio
+                and seen_count < min_confirm
+            ):
+                # skip unstable or spurious detections
+                if getattr(settings, "DEBUG_DETECTION", False):
+                    print(
+                        f"[Track] skipping unconfirmed track {tid} (seen={seen_count}, motion={motion_score:.3f})"
+                    )
+                continue
+
             self._resolve_identity(frame, bbox, tid, matched_face)
             cached = self.identity_cache.get(tid, {"name": "Unknown", "sid": None})
             student_name = cached["name"]
@@ -90,17 +221,36 @@ class TrackAttendanceUseCase:
 
             engagement = self._estimate_engagement(frame, bbox, tid, matched_face)
 
+            # boost engagement if writing/active motion detected but face looks away
+            try:
+                if (
+                    isinstance(engagement, str)
+                    and engagement == "low"
+                    and motion_score >= motion_min_ratio
+                ):
+                    # promote low -> medium, medium -> high
+                    engagement = "medium"
+                elif (
+                    isinstance(engagement, str)
+                    and engagement == "medium"
+                    and motion_score >= (motion_min_ratio * 2)
+                ):
+                    engagement = "high"
+            except Exception:
+                pass
+
             print(
                 f"[Track] track_id {tid} - name: {student_name} - engagement: {engagement}"
             )
 
             if student_id and student_id != "Unknown":
                 presence_state = self.presence_tracker.get(student_id)
-                if presence_state is None or (
-                    presence_state["first_seen"].date() != now.date()
-                ) or (
-                    now - presence_state["last_seen"]
-                ).total_seconds() > self.config.stale_track_ttl_seconds:
+                if (
+                    presence_state is None
+                    or (presence_state["first_seen"].date() != now.date())
+                    or (now - presence_state["last_seen"]).total_seconds()
+                    > self.config.stale_track_ttl_seconds
+                ):
                     self.presence_tracker[student_id] = {
                         "first_seen": now,
                         "last_seen": now,
@@ -114,7 +264,9 @@ class TrackAttendanceUseCase:
                     if (
                         now - first_seen
                     ).total_seconds() >= self.config.presence_confirmation_seconds:
-                        is_accounted_for_today = self._log_visit(student_id, engagement, now)
+                        is_accounted_for_today = self._log_visit(
+                            student_id, engagement, now
+                        )
                         if is_accounted_for_today:
                             self.marked_students[student_id] = now.date()
 
@@ -128,20 +280,29 @@ class TrackAttendanceUseCase:
                 }
             )
 
+        # update previous gray for next frame
+        try:
+            if current_gray is not None:
+                self.prev_gray = current_gray.copy()
+        except Exception:
+            pass
+
         self._cleanup_stale_tracks(now)
         return {"students": final_results}
 
     def _detect_faces(self, frame) -> list[dict]:
         """
         Runs the internal step detect faces.
-        
+
         Args:
             frame: Input value for `frame`.
-        
+
         Returns:
             The function result.
         """
-        if not self.face_recognizer or not hasattr(self.face_recognizer, "detect_faces"):
+        if not self.face_recognizer or not hasattr(
+            self.face_recognizer, "detect_faces"
+        ):
             return []
 
         try:
@@ -152,16 +313,18 @@ class TrackAttendanceUseCase:
 
         return detected_faces if isinstance(detected_faces, list) else []
 
-    def _resolve_identity(self, frame, bbox, track_id: int, matched_face: dict | None) -> None:
+    def _resolve_identity(
+        self, frame, bbox, track_id: int, matched_face: dict | None
+    ) -> None:
         """
         Runs the internal step resolve identity.
-        
+
         Args:
             frame: Input value for `frame`.
             bbox: Input value for `bbox`.
             track_id: Input value for `track_id`.
             matched_face: Input value for `matched_face`.
-        
+
         Returns:
             Does not return a value.
         """
@@ -177,7 +340,9 @@ class TrackAttendanceUseCase:
         student_id = None
         if self.face_recognizer:
             try:
-                student_id = self.face_recognizer.recognize(face_crop, track_id=track_id)
+                student_id = self.face_recognizer.recognize(
+                    face_crop, track_id=track_id
+                )
             except Exception as e:
                 print(f"[Track] face recognition error: {e}")
 
@@ -195,16 +360,18 @@ class TrackAttendanceUseCase:
 
         self.identity_cache[track_id] = {"name": student.name, "sid": student.id}
 
-    def _estimate_engagement(self, frame, bbox, track_id: int, matched_face: dict | None) -> str:
+    def _estimate_engagement(
+        self, frame, bbox, track_id: int, matched_face: dict | None
+    ) -> str:
         """
         Runs the internal step estimate engagement.
-        
+
         Args:
             frame: Input value for `frame`.
             bbox: Input value for `bbox`.
             track_id: Input value for `track_id`.
             matched_face: Input value for `matched_face`.
-        
+
         Returns:
             The function result.
         """
@@ -227,12 +394,12 @@ class TrackAttendanceUseCase:
     def _select_face_crop(self, frame, bbox, matched_face: dict | None):
         """
         Runs the internal step select face crop.
-        
+
         Args:
             frame: Input value for `frame`.
             bbox: Input value for `bbox`.
             matched_face: Input value for `matched_face`.
-        
+
         Returns:
             The function result.
         """
@@ -244,11 +411,11 @@ class TrackAttendanceUseCase:
     def _match_face_to_person(self, bbox, detected_faces: list[dict]) -> dict | None:
         """
         Runs the internal step match face to person.
-        
+
         Args:
             bbox: Input value for `bbox`.
             detected_faces: Input value for `detected_faces`.
-        
+
         Returns:
             The function result.
         """
@@ -273,10 +440,10 @@ class TrackAttendanceUseCase:
     def _build_head_region(self, bbox) -> list[int]:
         """
         Runs the internal step build head region.
-        
+
         Args:
             bbox: Input value for `bbox`.
-        
+
         Returns:
             The function result.
         """
@@ -296,11 +463,11 @@ class TrackAttendanceUseCase:
     def _extract_face_crop(self, frame, bbox):
         """
         Runs the internal step extract face crop.
-        
+
         Args:
             frame: Input value for `frame`.
             bbox: Input value for `bbox`.
-        
+
         Returns:
             The function result.
         """
@@ -371,8 +538,8 @@ class TrackAttendanceUseCase:
         face_width = max(1, fx2 - fx1)
         face_height = max(1, fy2 - fy1)
 
-        portrait_width = int(face_width * 2.6)
-        portrait_height = int(face_height * 4.8)
+        portrait_width = int(face_width * 2.0)
+        portrait_height = int(face_height * 3.5)
         center_x = (fx1 + fx2) // 2
         top = fy1 - int(face_height * 0.35)
 
@@ -427,11 +594,11 @@ class TrackAttendanceUseCase:
     def _intersection_over_face_area(first_bbox, second_bbox) -> float:
         """
         Runs the internal step intersection over face area.
-        
+
         Args:
             first_bbox: Input value for `first_bbox`.
             second_bbox: Input value for `second_bbox`.
-        
+
         Returns:
             The function result.
         """
@@ -501,10 +668,10 @@ class TrackAttendanceUseCase:
     def _cleanup_stale_tracks(self, now: datetime) -> None:
         """
         Runs the internal step cleanup stale tracks.
-        
+
         Args:
             now: Input value for `now`.
-        
+
         Returns:
             Does not return a value.
         """
@@ -527,20 +694,22 @@ class TrackAttendanceUseCase:
     def _log_visit(self, student_id, engagement, now: datetime) -> bool:
         """
         Runs the internal step log visit.
-        
+
         Args:
             student_id: Input value for `student_id`.
             engagement: Input value for `engagement`.
             now: Input value for `now`.
-        
+
         Returns:
             The function result.
         """
         cooldown_deadline = timedelta(seconds=self.config.log_cooldown_seconds)
         last_logged_at = self.log_cooldowns.get(student_id)
-        if last_logged_at and last_logged_at.date() == now.date() and (
-            now - last_logged_at
-        ) <= cooldown_deadline:
+        if (
+            last_logged_at
+            and last_logged_at.date() == now.date()
+            and (now - last_logged_at) <= cooldown_deadline
+        ):
             return True
 
         if self._has_log_for_date(student_id, now.date()):
@@ -582,11 +751,11 @@ class TrackAttendanceUseCase:
     def _has_log_for_date(self, student_id: str, target_date: date_type) -> bool:
         """
         Runs the internal step has log for date.
-        
+
         Args:
             student_id: Input value for `student_id`.
             target_date: Input value for `target_date`.
-        
+
         Returns:
             The function result.
         """
@@ -601,10 +770,10 @@ class TrackAttendanceUseCase:
     def _resolve_lesson_start(self, now: datetime) -> datetime:
         """
         Runs the internal step resolve lesson start.
-        
+
         Args:
             now: Input value for `now`.
-        
+
         Returns:
             The function result.
         """

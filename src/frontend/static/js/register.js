@@ -51,7 +51,8 @@ function initRegisterForm() {
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !payload) {
-        const errorMessage = payload?.error || `Ошибка сервера: HTTP ${response.status}`;
+        const errorMessage =
+          payload?.error || `Ошибка сервера: HTTP ${response.status}`;
         if (statusNode) {
           statusNode.innerText = errorMessage;
         }
@@ -67,7 +68,8 @@ function initRegisterForm() {
       }
     } catch (error) {
       if (statusNode) {
-        statusNode.innerText = "Не удалось отправить форму. Проверьте соединение.";
+        statusNode.innerText =
+          "Не удалось отправить форму. Проверьте соединение.";
       }
       window.alert("Не удалось отправить форму. Проверьте соединение.");
     } finally {

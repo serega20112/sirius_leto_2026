@@ -4,17 +4,18 @@ from src.backend.application.exceptions import ValidationError
 class GetStudentAttendanceUseCase:
     """Query-use-case детальной статистики посещаемости ученика."""
 
-    def __init__(self, attendance_repo, student_repo):
+    def __init__(self, attendance_repo, student_repo, engagement_repo):
         self.attendance_repo = attendance_repo
         self.student_repo = student_repo
+        self.engagement_repo = engagement_repo
 
     def execute(self, student_id: str) -> dict:
         """
         Executes the main scenario for GetStudentAttendanceUseCase.
-        
+
         Args:
             student_id: Input value for `student_id`.
-        
+
         Returns:
             The scenario execution result.
         """
@@ -86,7 +87,15 @@ class GetStudentAttendanceUseCase:
         on_time_days = attended_days - late_days
         lesson_days = len(lesson_dates)
         absent_days = len(absences)
-        attendance_rate = round((attended_days / lesson_days) * 100) if lesson_days else 0
+        attendance_rate = (
+            round((attended_days / lesson_days) * 100) if lesson_days else 0
+        )
+
+        # Fetch engagement data for the student
+        latest_engagement = self.engagement_repo.get_latest_engagement(student_id)
+        engagement_stats = self.engagement_repo.get_engagement_stats(
+            student_id, days=30
+        )
 
         return {
             "student": {
@@ -105,4 +114,8 @@ class GetStudentAttendanceUseCase:
             "late_arrivals": late_arrivals,
             "absences": absences,
             "history": history,
+            "engagement": {
+                "latest": latest_engagement,
+                "stats": engagement_stats,
+            },
         }

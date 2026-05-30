@@ -10,11 +10,11 @@ from src.backend.infrastructure.persistence.sqlite.attendance_repository import 
 def test_add_log_persists_and_returns_entity(mock_session, mock_attendance_log):
     """
     Verifies scenario add log persists and returns entity.
-    
+
     Args:
         mock_session: Input value for `mock_session`.
         mock_attendance_log: Input value for `mock_attendance_log`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -29,10 +29,10 @@ def test_add_log_persists_and_returns_entity(mock_session, mock_attendance_log):
     def refresh_side_effect(model):
         """
         Verifies scenario refresh side effect.
-        
+
         Args:
             model: Input value for `model`.
-        
+
         Returns:
             The result of the operation.
         """
@@ -57,10 +57,10 @@ def test_add_log_persists_and_returns_entity(mock_session, mock_attendance_log):
 def test_get_logs_by_student_returns_entities(mock_session):
     """
     Verifies scenario get logs by student returns entities.
-    
+
     Args:
         mock_session: Input value for `mock_session`.
-    
+
     Returns:
         Does not return a value.
     """

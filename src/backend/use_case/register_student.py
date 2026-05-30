@@ -14,12 +14,12 @@ class RegisterStudentUseCase:
     def execute(self, name: str, group_name: str, photos_bytes: list[bytes]) -> Student:
         """
         Executes the main scenario for RegisterStudentUseCase.
-        
+
         Args:
             name: Input value for `name`.
             group_name: Input value for `group_name`.
             photos_bytes: Input value for `photos_bytes`.
-        
+
         Returns:
             The scenario execution result.
         """
@@ -45,7 +45,7 @@ class RegisterStudentUseCase:
             name=name,
             group_name=group_name,
             photo_paths=photo_paths,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
 
         self.repo.save(student)

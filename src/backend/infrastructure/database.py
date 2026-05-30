@@ -2,7 +2,13 @@ import os
 from datetime import datetime
 from pathlib import Path
 from sqlalchemy import (
-    create_engine, Column, String, Integer, DateTime, Boolean, ForeignKey
+    create_engine,
+    Column,
+    String,
+    Integer,
+    DateTime,
+    Boolean,
+    ForeignKey,
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship, scoped_session
 from src.backend.domain.student.entity import Student
@@ -13,11 +19,17 @@ DB_PATH = DB_DIR / "attendance.db"
 DB_DIR.mkdir(parents=True, exist_ok=True)
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = scoped_session(
+    sessionmaker(autocommit=False, autoflush=False, bind=engine)
+)
+
 
 class Base(DeclarativeBase):
     pass
+
 
 class StudentModel(Base):
     __tablename__ = "students"
@@ -29,15 +41,20 @@ class StudentModel(Base):
     photo3_path = Column(String)
     created_at = Column(DateTime, default=datetime.now)
 
-    logs = relationship("AttendanceModel", back_populates="student", cascade="all, delete-orphan")
+    logs = relationship(
+        "AttendanceModel", back_populates="student", cascade="all, delete-orphan"
+    )
+    engagement_logs = relationship(
+        "EngagementHistoryModel", back_populates="student", cascade="all, delete-orphan"
+    )
 
     def to_domain(self) -> Student:
         """
         Runs the operation to domain.
-        
+
         Args:
             None.
-        
+
         Returns:
             The function result.
         """
@@ -46,17 +63,17 @@ class StudentModel(Base):
             name=self.name,
             group_name=self.group_name,
             photo_paths=[self.photo1_path, self.photo2_path, self.photo3_path],
-            created_at=self.created_at
+            created_at=self.created_at,
         )
 
     @classmethod
     def from_domain(cls, student: Student) -> "StudentModel":
         """
         Runs the operation from domain.
-        
+
         Args:
             student: Input value for `student`.
-        
+
         Returns:
             The function result.
         """
@@ -67,8 +84,9 @@ class StudentModel(Base):
             photo1_path=student.photo_paths[0],
             photo2_path=student.photo_paths[1],
             photo3_path=student.photo_paths[2],
-            created_at=student.created_at
+            created_at=student.created_at,
         )
+
 
 class AttendanceModel(Base):
     __tablename__ = "attendance_logs"
@@ -80,13 +98,25 @@ class AttendanceModel(Base):
 
     student = relationship("StudentModel", back_populates="logs")
 
+
+class EngagementHistoryModel(Base):
+    __tablename__ = "engagement_history"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(String, ForeignKey("students.id"), index=True)
+    timestamp = Column(DateTime, default=datetime.now)
+    engagement_score = Column(String, default="unknown")
+    confidence = Column(Integer, default=0)
+
+    student = relationship("StudentModel", back_populates="engagement_logs")
+
+
 def init_db():
     """
     Runs the operation init db.
-    
+
     Args:
         None.
-    
+
     Returns:
         The function result.
     """

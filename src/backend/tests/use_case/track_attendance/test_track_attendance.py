@@ -19,7 +19,7 @@ def _build_use_case(
 ):
     """
     Verifies scenario build use case.
-    
+
     Args:
         detector: Input value for `detector`.
         recognizer: Input value for `recognizer`.
@@ -27,7 +27,7 @@ def _build_use_case(
         student_repo: Input value for `student_repo`.
         attendance_repo: Input value for `attendance_repo`.
         config: Input value for `config`.
-    
+
     Returns:
         The function result.
     """
@@ -44,10 +44,10 @@ def _build_use_case(
 def test_execute_logs_known_student_after_presence_confirmation():
     """
     Verifies scenario execute logs known student after presence confirmation.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -94,10 +94,10 @@ def test_execute_logs_known_student_after_presence_confirmation():
 def test_execute_retries_unknown_identity_on_next_frame():
     """
     Verifies scenario execute retries unknown identity on next frame.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -138,10 +138,10 @@ def test_execute_retries_unknown_identity_on_next_frame():
 def test_execute_forgets_stale_tracks():
     """
     Verifies scenario execute forgets stale tracks.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -178,10 +178,10 @@ def test_execute_forgets_stale_tracks():
 def test_execute_passes_matched_face_bbox_to_engagement_estimator():
     """
     Verifies scenario execute passes matched face bbox to engagement estimator.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -225,10 +225,10 @@ def test_execute_passes_matched_face_bbox_to_engagement_estimator():
 def test_execute_logs_student_again_on_new_day():
     """
     Verifies scenario execute logs student again on new day.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -319,10 +319,10 @@ def test_execute_builds_larger_display_bbox_from_face():
 def test_log_visit_uses_lesson_start_time_for_late_mark():
     """
     Verifies scenario log visit uses lesson start time for late mark.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -350,10 +350,10 @@ def test_log_visit_uses_lesson_start_time_for_late_mark():
 def test_log_visit_skips_duplicate_log_for_same_day():
     """
     Verifies scenario log visit skips duplicate log for same day.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """

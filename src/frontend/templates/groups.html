@@ -1,94 +1,102 @@
-{% extends "index.html" %}
-{% set totals = namespace(students=0) %}
-{% for _group_name, students in groups.items() %}
-  {% set totals.students = totals.students + students|length %}
-{% endfor %}
-{% block title %}Группы и ученики | Sirius Leto 2026{% endblock %}
-{% block page_title %}Группы и посещаемость{% endblock %}
-{% block page_subtitle %}
-Нажмите на ученика, чтобы посмотреть его посещаемость.
-{% endblock %}
-{% block page_styles %}
+{% extends "index.html" %} {% set totals = namespace(students=0) %} {% for
+_group_name, students in groups.items() %} {% set totals.students =
+totals.students + students|length %} {% endfor %} {% block title %}Группы и
+ученики | Sirius Leto 2026{% endblock %} {% block page_title %}Группы и
+посещаемость{% endblock %} {% block page_subtitle %} Нажмите на ученика, чтобы
+посмотреть его посещаемость. {% endblock %} {% block page_styles %}
 <link rel="stylesheet" href="/static/css/groups.css" />
-{% endblock %}
-{% block page_content %}
-<div class="accordion groups-accordion" id="groupsAccordion">
-  {% for group, students in groups.items() %}
-  <div class="accordion-item group-item">
-    <h2 class="accordion-header">
-      <button
-        class="accordion-button collapsed group-trigger"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#group-{{ loop.index }}"
+{% endblock %} {% block page_content %}
+<div class="groups-container">
+  <div class="accordion groups-accordion" id="groupsAccordion">
+    {% for group, students in groups.items() %}
+    <div class="accordion-item group-item">
+      <h2 class="accordion-header">
+        <button
+          class="accordion-button collapsed group-trigger"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#group-{{ loop.index }}"
+        >
+          <span class="group-heading">
+            <span class="group-title">Группа {{ group }}</span>
+            <span class="group-subtitle">История посещаемости и опозданий</span>
+          </span>
+          <span class="group-count">{{ students|length }} чел.</span>
+        </button>
+      </h2>
+      <div
+        id="group-{{ loop.index }}"
+        class="accordion-collapse collapse"
+        data-bs-parent="#groupsAccordion"
       >
-        <span class="group-heading">
-          <span class="group-title">Группа {{ group }}</span>
-          <span class="group-subtitle">История посещаемости и опозданий</span>
-        </span>
-        <span class="group-count">{{ students|length }} чел.</span>
-      </button>
-    </h2>
-    <div
-      id="group-{{ loop.index }}"
-      class="accordion-collapse collapse"
-      data-bs-parent="#groupsAccordion"
-    >
-      <div class="accordion-body">
-        <div class="row g-3">
-          {% for s in students %}
-          <div class="col-md-6 col-xl-4">
-            <article class="student-card">
-              <div class="student-head">
-                <div class="avatar-wrapper">
-                  <img
-                    src="{{ s.photo }}"
-                    alt="Фото {{ s.name }}"
-                    class="student-avatar"
-                  />
+        <div class="accordion-body">
+          <div class="row g-3">
+            {% for s in students %}
+            <div class="col-md-6 col-xl-4">
+              <article class="student-card">
+                <div class="student-head">
+                  <div class="avatar-wrapper">
+                    <img
+                      src="{{ s.photo }}"
+                      alt="Фото {{ s.name }}"
+                      class="student-avatar"
+                    />
+                  </div>
+                  <div class="student-meta">
+                    <h3 class="student-name">{{ s.name }}</h3>
+                    <div class="student-engagement">
+                      Вовлеченность:
+                      <span
+                        class="engagement-badge"
+                        data-student-id="{{ s.id }}"
+                        >Загрузка...</span
+                      >
+                    </div>
+                  </div>
                 </div>
-                <div class="student-meta">
-                  <h3 class="student-name">{{ s.name }}</h3>
-                  <div class="student-id">ID: {{ s.id[:8] }}...</div>
-                </div>
-              </div>
 
-              <button
-                class="btn btn-outline-primary btn-student"
-                onclick="toggleDetails('{{ s.id }}')"
-              >
-                <i class="bi bi-calendar-check"></i>
-                <span>Посмотреть</span>
-              </button>
-
-              <div id="details-{{ s.id }}" class="student-details d-none">
-                <div
-                  id="attendance-summary-{{ s.id }}"
-                  class="attendance-summary-grid"
+                <button
+                  class="btn btn-outline-primary btn-student"
+                  onclick="toggleDetails('{{ s.id }}')"
                 >
-                  <div class="attendance-empty">Загрузка статистики...</div>
+                  <i class="bi bi-calendar-check"></i>
+                  <span>Посмотреть</span>
+                </button>
+
+                <div id="details-{{ s.id }}" class="student-details d-none">
+                  <div
+                    id="attendance-summary-{{ s.id }}"
+                    class="attendance-summary-grid"
+                  >
+                    <div class="attendance-empty">Загрузка статистики...</div>
+                  </div>
+
+                  <section class="attendance-section">
+                    <div class="attendance-section-title">Опоздания</div>
+                    <div
+                      id="late-list-{{ s.id }}"
+                      class="attendance-list"
+                    ></div>
+                  </section>
+
+                  <section class="attendance-section">
+                    <div class="attendance-section-title">Пропуски</div>
+                    <div
+                      id="absent-list-{{ s.id }}"
+                      class="attendance-list"
+                    ></div>
+                  </section>
                 </div>
-
-                <section class="attendance-section">
-                  <div class="attendance-section-title">Опоздания</div>
-                  <div id="late-list-{{ s.id }}" class="attendance-list"></div>
-                </section>
-
-                <section class="attendance-section">
-                  <div class="attendance-section-title">Пропуски</div>
-                  <div id="absent-list-{{ s.id }}" class="attendance-list"></div>
-                </section>
-              </div>
-            </article>
+              </article>
+            </div>
+            {% endfor %}
           </div>
-          {% endfor %}
         </div>
       </div>
     </div>
+    {% endfor %}
   </div>
-  {% endfor %}
 </div>
-{% endblock %}
-{% block page_scripts %}
+{% endblock %} {% block page_scripts %}
 <script src="/static/js/groups.js"></script>
 {% endblock %}

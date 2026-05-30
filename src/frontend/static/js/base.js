@@ -44,7 +44,9 @@ async function loadAttendance() {
       return;
     }
 
-    logs.sort((first, second) => new Date(second.timestamp) - new Date(first.timestamp));
+    logs.sort(
+      (first, second) => new Date(second.timestamp) - new Date(first.timestamp),
+    );
     updateMetrics(logs);
 
     if (!logs.length) {

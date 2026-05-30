@@ -11,10 +11,10 @@ class StudentPhotoProvider:
     def read_student_thumbnail(self, filename: str) -> bytes:
         """
         Reads student thumbnail.
-        
+
         Args:
             filename: Input value for `filename`.
-        
+
         Returns:
             The requested data or prepared result.
         """
@@ -30,7 +30,9 @@ class StudentPhotoProvider:
         min_side = min(height, width)
         start_x = (width - min_side) // 2
         start_y = (height - min_side) // 2
-        image_cropped = image[start_y : start_y + min_side, start_x : start_x + min_side]
+        image_cropped = image[
+            start_y : start_y + min_side, start_x : start_x + min_side
+        ]
         image_resized = cv2.resize(
             image_cropped,
             (self.thumbnail_size, self.thumbnail_size),

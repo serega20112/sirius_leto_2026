@@ -1,14 +1,14 @@
-.groups-hero {
+ .groups-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
   gap: 22px;
   margin-bottom: 22px;
-}
+ }
 
-.page-intro-card,
-.page-summary-card {
+ .page-intro-card,
+ .page-summary-card {
   padding: 26px;
-}
+ }
 
 .page-intro-card .panel-title {
   font-size: clamp(1.5rem, 2.1vw, 2.2rem);
@@ -19,15 +19,19 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   background:
-    radial-gradient(circle at top left, rgba(23, 182, 157, 0.14), transparent 30%),
-    rgba(255, 255, 255, 0.03);
+    radial-gradient(
+      circle at top left,
+      rgba(23, 182, 157, 0.14),
+      transparent 30%
+    ),
+    rgba(0, 0, 0, 0.03);
 }
 
 .summary-pip {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .summary-label {
@@ -58,25 +62,31 @@
   background: transparent;
 }
 
-.group-trigger {
+/* Dark theme adjustments for group trigger */
+ .group-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 24px 26px;
+  padding: 20px 24px;
   border: 1px solid var(--line);
-  border-radius: 28px !important;
+  border-radius: var(--radius-lg);
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--panel-dark);
   box-shadow: var(--shadow-soft);
-}
+  transition: background 0.2s ease, transform 0.2s ease;
+ }
+.group-trigger:hover {
+  background: var(--panel);
+  transform: translateY(-2px);
+ }
 
-.group-trigger:not(.collapsed) {
+/* Dark theme for expanded group trigger */
+ .group-trigger:not(.collapsed) {
   color: var(--text-primary);
-  background:
-    linear-gradient(135deg, rgba(23, 182, 157, 0.16), rgba(255, 255, 255, 0.04));
+  background: var(--panel);
   box-shadow: var(--shadow-strong);
-}
+ }
 
 .group-trigger::after {
   flex-shrink: 0;
@@ -126,8 +136,12 @@
   border: 1px solid var(--line);
   border-radius: 26px;
   background:
-    radial-gradient(circle at top right, rgba(23, 182, 157, 0.1), transparent 26%),
-    rgba(255, 255, 255, 0.04);
+    radial-gradient(
+      circle at top right,
+      rgba(23, 182, 157, 0.1),
+      transparent 26%
+    ),
+    rgba(0, 0, 0, 0.04);
   box-shadow: var(--shadow-soft);
 }
 
@@ -153,19 +167,45 @@
   object-fit: cover;
 }
 
-.student-meta {
-  min-width: 0;
+ .student-card {
+  height: 100%;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel-dark);
+  box-shadow: var(--shadow-soft);
+  transition: background 0.2s ease, transform 0.2s ease;
+ }
+.student-card:hover {
+  background: var(--panel);
+  transform: translateY(-2px);
+ }
+
+.engagement-badge {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.78rem;
 }
 
-.student-name {
-  margin: 0 0 6px;
-  font-size: 1.1rem;
-  font-weight: 800;
+.engagement-badge.high {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
 }
 
-.student-id {
-  color: var(--text-secondary);
-  font-size: 0.86rem;
+.engagement-badge.medium {
+  background-color: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.engagement-badge.low {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.engagement-badge.unknown {
+  background-color: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
 }
 
 .btn-student {
@@ -194,7 +234,7 @@
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .attendance-metric-value {
@@ -237,7 +277,7 @@
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .attendance-empty {
@@ -246,7 +286,7 @@
   border-radius: 18px;
   text-align: center;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 @media (max-width: 991.98px) {
@@ -272,5 +312,69 @@
   .attendance-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* Redesign enhancements for groups page */
+.groups-container {
+  margin-top: 20px;
+}
+
+.group-item {
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  margin-bottom: 12px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.group-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-strong);
+}
+
+/* Hover effect for group trigger */
+.group-trigger:hover {
+  background: var(--panel);
+  opacity: 0.9;
+}
+
+.student-card {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.student-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-strong);
+}
+
+.group-count {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.groups-accordion {
+  gap: 20px;
+}
+
+.student-details {
+  gap: 20px;
+}
+
+.attendance-metric {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.attendance-row {
+  border: 1px solid var(--line);
+}
+
+@media (max-width: 575.98px) {
+  .group-item {
+    padding: 16px;
   }
 }

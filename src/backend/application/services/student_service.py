@@ -54,9 +54,11 @@ class StudentApplicationService:
                 {
                     "id": student.id,
                     "name": student.name,
-                    "photo": self._build_public_photo_url(student.photo_paths[0])
-                    if student.photo_paths
-                    else "",
+                    "photo": (
+                        self._build_public_photo_url(student.photo_paths[0])
+                        if student.photo_paths
+                        else ""
+                    ),
                 }
                 for student in students
             ]

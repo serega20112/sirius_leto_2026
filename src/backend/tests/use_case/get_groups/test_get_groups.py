@@ -7,10 +7,10 @@ from src.backend.use_case.get_groups import GetGroupsUseCase
 def test_execute_groups_students_by_group_and_name():
     """
     Verifies scenario execute groups students by group and name.
-    
+
     Args:
         None.
-    
+
     Returns:
         Does not return a value.
     """
@@ -42,10 +42,10 @@ def test_execute_groups_students_by_group_and_name():
         def get_all(self):
             """
             Verifies scenario get all.
-            
+
             Args:
                 None.
-            
+
             Returns:
                 The requested data or prepared result.
             """

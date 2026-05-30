@@ -2,9 +2,9 @@
 
 Ниже описан путь, который ближе всего к реальному использованию проекта на Windows.
 
-## Что понадобится
+-## Что понадобится
 
-- Python 3.10 или новее;
+- Python 3.11 (рекомендовано);
 - рабочая камера или путь к видеофайлу;
 - доступ в интернет хотя бы на первую загрузку моделей;
 - если нужен GPU, то установленный `torch` со сборкой под вашу CUDA.
@@ -12,20 +12,22 @@
 ## Подготовка окружения
 
 ```powershell
-python -m venv venv
-venv\Scripts\activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install -r requirements.ai.txt
+python -m venv .venv
+.venv\Scripts\Activate
+python --version  # убедитесь, что это Python 3.11.x
+python -m pip install --upgrade pip setuptools wheel
+
+# Установите NumPy бинарным колёсом, чтобы избежать сборки из исходников на Windows
+python -m pip install --only-binary=:all: numpy==1.26.3
+
+pip install -r .\requirements.txt
 ```
 
-Если планируется запуск распознавания лица на GPU через `facenet-pytorch`, лучше сразу поставить пакет отдельной командой:
+Если нужен GPU-ускорённый режим, устанавливайте соответствующие колёса `torch`/`torchvision` под вашу CUDA-версию по инструкции с официального сайта PyTorch.
 
-```powershell
-python -m pip install --no-deps "git+https://github.com/timesler/facenet-pytorch.git"
-```
-
-Это не случайный обходной путь. В некоторых сетях `PyPI` режется прокси, а GitHub остается доступен, поэтому прямой install из репозитория часто проходит стабильнее.
+Примечания по Windows:
+- Если установка NumPy/MediaPipe пытается собрать из исходников, установите Microsoft Visual C++ Build Tools или используйте Python-версию, для которой доступны бинарные колёса (рекомендуется CPython 3.11 64-bit).
+- Для Raspberry Pi / Linux следуйте инструкциям платформы: ставьте системные зависимости и используйте `opencv-python-headless` или сборку OpenCV из пакетов.
 
 ## Настройка `.env`
 

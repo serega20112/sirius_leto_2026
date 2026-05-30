@@ -15,10 +15,10 @@ from src.backend.use_case.register_student import RegisterStudentUseCase
 def mock_dependencies():
     """
     Verifies scenario mock dependencies.
-    
+
     Args:
         None.
-    
+
     Returns:
         The function result.
     """
@@ -40,20 +40,24 @@ def mock_dependencies():
         (
             "Петр Петров",
             "11Б",
-            [b"another_fake_photo_data_1", b"another_fake_photo_data_2", b"another_fake_photo_data_3"],
+            [
+                b"another_fake_photo_data_1",
+                b"another_fake_photo_data_2",
+                b"another_fake_photo_data_3",
+            ],
         ),
     ],
 )
 def test_execute(mock_dependencies, name, group_name, photo_bytes):
     """
     Verifies scenario execute.
-    
+
     Args:
         mock_dependencies: Input value for `mock_dependencies`.
         name: Input value for `name`.
         group_name: Input value for `group_name`.
         photo_bytes: Input value for `photo_bytes`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -82,10 +86,10 @@ def test_execute(mock_dependencies, name, group_name, photo_bytes):
 def test_execute_requires_exactly_three_photos(mock_dependencies):
     """
     Verifies scenario execute requires exactly three photos.
-    
+
     Args:
         mock_dependencies: Input value for `mock_dependencies`.
-    
+
     Returns:
         Does not return a value.
     """
@@ -102,10 +106,10 @@ def test_execute_requires_exactly_three_photos(mock_dependencies):
 def test_execute_requires_name_and_group(mock_dependencies):
     """
     Verifies scenario execute requires name and group.
-    
+
     Args:
         mock_dependencies: Input value for `mock_dependencies`.
-    
+
     Returns:
         Does not return a value.
     """

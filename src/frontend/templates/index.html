@@ -85,14 +85,14 @@
         <header class="app-header">
           {% set subtitle %}{% block page_subtitle %}{% endblock %}{% endset %}
           <div>
-            <span class="eyebrow">{% block eyebrow %}Панель преподавателя{% endblock %}</span>
+            <span class="eyebrow"
+              >{% block eyebrow %}Панель преподавателя{% endblock %}</span
+            >
             <h1 class="page-title">
               {% block page_title %}Мониторинг аудитории{% endblock %}
             </h1>
             {% if subtitle|trim %}
-            <p class="page-subtitle">
-              {{ subtitle|trim }}
-            </p>
+            <p class="page-subtitle">{{ subtitle|trim }}</p>
             {% endif %}
           </div>
           <div class="header-tools">

@@ -7,6 +7,51 @@
 .register-form-panel {
   padding: 28px;
 }
+/* Enhanced card style for register form panel */
+.register-form-panel {
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.register-form-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-strong);
+}
+
+/* Field container enhancements */
+.field-shell {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease;
+}
+.field-shell .form-control:focus {
+  border-color: var(--accent-soft);
+}
+
+/* Primary button style for register */
+.btn-register {
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    var(--accent-strong) 100%
+  );
+  border: none;
+  color: var(--text-inverse);
+  border-radius: var(--radius-md);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+.btn-register:hover,
+.btn-register:focus {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #118e82 0%, #0b5a53 100%);
+}
 
 .form-heading {
   margin-bottom: 20px;

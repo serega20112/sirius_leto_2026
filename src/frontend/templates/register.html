@@ -1,13 +1,11 @@
-{% extends "index.html" %}
-{% block title %}Регистрация ученика | Sirius Leto 2026{% endblock %}
-{% block page_title %}Добавить ученика{% endblock %}
-{% block page_styles %}
+{% extends "index.html" %} {% block title %}Регистрация ученика | Sirius Leto
+2026{% endblock %} {% block page_title %}Добавить ученика{% endblock %} {% block
+page_styles %}
 <link
   rel="stylesheet"
   href="{{ url_for('static', filename='css/register.css') }}"
 />
-{% endblock %}
-{% block page_content %}
+{% endblock %} {% block page_content %}
 <section class="register-layout">
   <section class="surface-panel register-form-panel">
     <div class="form-heading">
@@ -84,7 +82,6 @@
     </div>
   </div>
 </div>
-{% endblock %}
-{% block page_scripts %}
+{% endblock %} {% block page_scripts %}
 <script src="{{ url_for('static', filename='js/register.js') }}"></script>
 {% endblock %}

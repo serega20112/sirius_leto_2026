@@ -21,6 +21,9 @@ from src.backend.infrastructure.persistence.sqlite import (
     SqliteAttendanceRepository,
     SqliteStudentRepository,
 )
+from src.backend.infrastructure.persistence.engagement_repository import (
+    EngagementRepository,
+)
 from src.backend.infrastructure.video.annotated_streamer import AnnotatedVideoStreamer
 from src.backend.dependencies import settings
 
@@ -65,10 +68,16 @@ class Container:
             stale_track_ttl_seconds=settings.STALE_TRACK_TTL_SECONDS,
             lesson_start_time=settings.LESSON_START_TIME,
         )
-        self.face_recognizer = FaceRecognizer(
-            str(settings.IMAGES_DIR),
-            config=self.face_recognition_config,
-        )
+        # Initialize face recognizer (lightweight implementation)
+        try:
+            self.face_recognizer = FaceRecognizer(
+                str(settings.IMAGES_DIR),
+                config=self.face_recognition_config,
+            )
+            print("[Container] face_recognizer initialized")
+        except Exception as e:
+            print(f"[Container] face_recognizer init error: {e}")
+            self.face_recognizer = None
         self.register_student_use_case = RegisterStudentUseCase(
             self.student_repository,
             self.file_storage,
@@ -79,13 +88,19 @@ class Container:
             self.attendance_repository,
             self.student_repository,
         )
+        # Initialize EngagementRepository (uses its own SessionLocal internally)
+        self.engagement_repository = EngagementRepository()
         self.get_student_attendance_use_case = GetStudentAttendanceUseCase(
             self.attendance_repository,
             self.student_repository,
+            self.engagement_repository,
         )
 
+        # Initialize person detector (lightweight implementation)
         try:
-            self.person_detector = PersonDetector(settings.YOLO_MODEL_PATH)
+            # Use the lightweight `PersonDetector` (MobileNet-SSD / HOG fallback)
+            # Do not pass YOLO model paths — YOLO is disabled for edge deployment.
+            self.person_detector = PersonDetector()
             print("[Container] person_detector initialized")
         except Exception as e:
             print(f"[Container] person_detector init error: {e}")

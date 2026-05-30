@@ -6,11 +6,11 @@ from PIL import Image, ImageDraw, ImageFont
 def draw_overlays(frame, tracking_result):
     """
     Draws overlays.
-    
+
     Args:
         frame: Input value for `frame`.
         tracking_result: Input value for `tracking_result`.
-    
+
     Returns:
         The computed or transformed result.
     """
@@ -18,9 +18,13 @@ def draw_overlays(frame, tracking_result):
     h, w = frame.shape[:2]
 
     for student in students:
+        # sanitized bbox used for main drawing
         bbox = student.get("display_bbox") or student.get("bbox")
+        raw_bbox = student.get("raw_bbox")
         name = student.get("name", "Unknown")
         engagement = student.get("engagement", "unknown")
+        track_id = student.get("track_id")
+        backend = student.get("detector_backend")
 
         if bbox is None:
             continue
@@ -49,10 +53,31 @@ def draw_overlays(frame, tracking_result):
             else:
                 color = (255, 255, 255)
 
+        # draw raw detection bbox (if present) with thin magenta rectangle
+        if raw_bbox is not None:
+            try:
+                rx1, ry1, rx2, ry2 = map(int, raw_bbox)
+                cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), (255, 0, 255), 1)
+            except Exception:
+                pass
+
+        # main display bbox (thicker)
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
 
+        # primary label (name | ENGAGEMENT)
         label = f"{name} | {str(engagement).upper()}"
         frame = draw_russian_text(frame, label, (x1, max(0, y1 - 30)), color)
+
+        # debug footer: track id and backend
+        footer = ""
+        if track_id is not None:
+            footer += f"id:{track_id} "
+        if backend:
+            footer += f"[{backend}]"
+        if footer:
+            frame = draw_russian_text(
+                frame, footer, (x1, min(y2 + 6, h - 10)), (200, 200, 200)
+            )
 
     return frame
 
@@ -60,13 +85,13 @@ def draw_overlays(frame, tracking_result):
 def draw_russian_text(img, text, position, color):
     """
     Draws russian text.
-    
+
     Args:
         img: Input value for `img`.
         text: Input value for `text`.
         position: Input value for `position`.
         color: Input value for `color`.
-    
+
     Returns:
         The computed or transformed result.
     """
