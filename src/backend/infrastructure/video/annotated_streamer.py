@@ -27,6 +27,7 @@ class AnnotatedVideoStreamer:
         self._stop_event = threading.Event()
         self._capture_thread = None
         self._inference_thread = None
+        self._engagement_thread = None
 
     def stream(self):
         source = getattr(settings, "CAMERA_SOURCE", 0)
@@ -144,6 +145,38 @@ class AnnotatedVideoStreamer:
                 )
                 self._inference_thread.start()
 
+                # engagement logger: periodically persist latest engagement to DB
+                def _engagement_loop():
+                    interval = float(getattr(settings, "ENGAGEMENT_LOG_INTERVAL", 60.0) or 60.0)
+                    from time import sleep
+                    while not self._stop_event.is_set():
+                        try:
+                            # Sleep first so we log only after the first interval
+                            sleep(interval)
+                            latest = getattr(self.track_attendance_use_case, "latest_engagements", None)
+                            if not latest:
+                                continue
+                            try:
+                                from src.backend.infrastructure.persistence.engagement_repository import EngagementRepository
+
+                                repo = EngagementRepository()
+                                for sid, info in list(latest.items()):
+                                    try:
+                                        if not sid or sid == "Unknown":
+                                            continue
+                                        score = info.get("score", "unknown")
+                                        confidence = int(info.get("confidence", 0) or 0)
+                                        repo.add_engagement_record(sid, score, confidence)
+                                    except Exception as e:
+                                        print(f"[Engage] record write error: {e}")
+                            except Exception as e:
+                                print(f"[Engage] repo init error: {e}")
+                        except Exception as e:
+                            print(f"[Engage] logger error: {e}")
+
+                self._engagement_thread = threading.Thread(target=_engagement_loop, daemon=True)
+                self._engagement_thread.start()
+
                 stream_fps = float(getattr(settings, "STREAM_FPS", 20.0) or 20.0)
                 stream_interval = 1.0 / max(0.0001, stream_fps)
 
@@ -170,6 +203,8 @@ class AnnotatedVideoStreamer:
                         self._capture_thread.join(timeout=0.5)
                     if self._inference_thread is not None:
                         self._inference_thread.join(timeout=0.5)
+                    if self._engagement_thread is not None:
+                        self._engagement_thread.join(timeout=0.5)
                 except Exception:
                     pass
                 if cap is not None:

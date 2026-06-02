@@ -1,4 +1,5 @@
 from flask import Blueprint, Response, jsonify, render_template, request
+from src.backend.application.exceptions import ValidationError
 
 
 def create_monitor_blueprint(attendance_service, student_service):
@@ -16,15 +17,6 @@ def create_monitor_blueprint(attendance_service, student_service):
 
     @monitor_bp.route("/video_feed")
     def video_feed():
-        """
-        Return the live annotated video stream.
-
-        Args:
-            None.
-
-        Returns:
-            A streaming HTTP response with MJPEG frames.
-        """
         return Response(
             attendance_service.stream_video(),
             mimetype="multipart/x-mixed-replace; boundary=frame",
@@ -85,12 +77,40 @@ def create_monitor_blueprint(attendance_service, student_service):
             A JSON response confirming request validation.
         """
         payload = request.get_json(silent=True) or {}
-        return jsonify(
-            attendance_service.update_manual_status(
+        try:
+            result = attendance_service.update_manual_status(
                 student_id=payload.get("student_id"),
                 status=payload.get("status"),
                 payload=payload,
             )
-        )
+            status_code = 201 if isinstance(result, dict) and result.get("status") == "created" else 200
+            return jsonify(result), status_code
+        except ValidationError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            print(f"[Monitor] manual_status error: {exc}")
+            return jsonify({"error": "Internal server error"}), 500
+
+    @monitor_bp.route("/lessons_beginning", methods=["GET", "POST"])
+    def lessons_beginning():
+        # Delegate all validation and updates to the application service.
+        if request.method == "GET":
+            times = attendance_service.get_lesson_times()
+            return render_template(
+                "lessons.html",
+                start_time=times.get("lesson_start_time"),
+                end_time=times.get("lesson_end_time"),
+            )
+
+        start_str = request.form.get("start_time")
+        end_str = request.form.get("end_time")
+        try:
+            result = attendance_service.update_lesson_times(start_str, end_str)
+        except ValidationError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception:
+            return jsonify({"error": "Internal server error"}), 500
+
+        return jsonify(result)
 
     return monitor_bp

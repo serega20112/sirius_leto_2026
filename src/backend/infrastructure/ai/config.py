@@ -33,8 +33,16 @@ class EngagementConfig:
     min_body_visibility: float = 0.4
 
 
-@dataclass(frozen=True)
+@dataclass
 class AttendanceTrackingConfig:
+    """Configuration for attendance tracking.
+
+    The original configuration only contained a lesson start time. To support
+    explicit lesson end times we add ``lesson_end_time``. The dataclass is no
+    longer frozen so the values can be updated at runtime via the new API
+    endpoint.
+    """
+
     presence_confirmation_seconds: float = 3.0
     log_cooldown_seconds: float = 60.0
     late_after_seconds: float = 60.0
@@ -42,3 +50,5 @@ class AttendanceTrackingConfig:
     face_crop_width_ratio: float = 0.7
     face_crop_height_ratio: float = 0.5
     lesson_start_time: time = time(9, 0)
+    # New attribute: end of lesson. Default to one hour after start.
+    lesson_end_time: time = time(10, 0)

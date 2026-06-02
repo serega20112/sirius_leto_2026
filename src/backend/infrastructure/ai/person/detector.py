@@ -245,6 +245,9 @@ class PersonDetector:
         # last detection backend used (for debug overlays)
         self.last_backend: str | None = None
 
+        # NMS threshold for overlapping bbox suppression
+        self.nms_threshold = float(getattr(settings, "NMS_THRESHOLD", 0.45) or 0.45)
+
         # Flag to indicate whether OpenVINO models are ready for the combined stack 8
         self.use_openvino_stack = self.yolo_model is not None and self.scrfd_model is not None
 
@@ -271,6 +274,46 @@ class PersonDetector:
         # Add batch dimension and transpose to NCHW
         blob = np.expand_dims(blob, axis=0).transpose(0, 3, 1, 2)
         return blob
+
+    def _compute_iou(self, a: list[int], b: list[int]) -> float:
+        ax1, ay1, ax2, ay2 = a
+        bx1, by1, bx2, by2 = b
+        inter_x1 = max(ax1, bx1)
+        inter_y1 = max(ay1, by1)
+        inter_x2 = min(ax2, bx2)
+        inter_y2 = min(ay2, by2)
+        if inter_x2 <= inter_x1 or inter_y2 <= inter_y1:
+            return 0.0
+        inter = float((inter_x2 - inter_x1) * (inter_y2 - inter_y1))
+        area_a = float(max(1, (ax2 - ax1) * (ay2 - ay1)))
+        area_b = float(max(1, (bx2 - bx1) * (by2 - by1)))
+        return inter / (area_a + area_b - inter + 1e-9)
+
+    def _nms_rects(self, rects: List[list[int]], iou_thresh: float | None = None) -> List[list[int]]:
+        """Greedy NMS by area (keeps larger boxes first) to suppress overlapping detections."""
+        if not rects:
+            return []
+        if iou_thresh is None:
+            iou_thresh = float(self.nms_threshold)
+
+        boxes = list(rects)
+        areas = [max(1, (r[2] - r[0]) * (r[3] - r[1])) for r in boxes]
+        order = sorted(range(len(boxes)), key=lambda i: areas[i], reverse=True)
+        keep: List[int] = []
+        suppressed = set()
+
+        for idx in order:
+            if idx in suppressed:
+                continue
+            keep.append(idx)
+            for j in order:
+                if j == idx or j in suppressed:
+                    continue
+                iou = self._compute_iou(boxes[idx], boxes[j])
+                if iou > iou_thresh:
+                    suppressed.add(j)
+
+        return [boxes[i] for i in keep]
 
     def _detect_with_openvino_yolo(self, frame: np.ndarray) -> List[list[int]]:
         """Run YOLOv8 person detection using the compiled OpenVINO model.
@@ -617,17 +660,23 @@ class PersonDetector:
             # Get the first (and typically only) output tensor
             output = next(iter(result.values()))
             detections = np.squeeze(output)
-            rects: List[list[int]] = []
+            candidates: List[tuple[list[int], float]] = []
             if detections.ndim == 2:
                 for det in detections:
                     # YOLOv8 format: [x, y, w, h, conf, class0, class1, ...]
                     conf = float(det[4])
                     if conf < self.conf_threshold:
                         continue
-                    # class index for person is assumed to be 0
-                    class_id = int(np.argmax(det[5:]))
+                    class_scores = det[5:]
+                    if class_scores.size == 0:
+                        class_id = 0
+                        class_conf = 1.0
+                    else:
+                        class_id = int(np.argmax(class_scores))
+                        class_conf = float(class_scores[class_id])
                     if class_id != 0:
                         continue
+                    score = conf * class_conf
                     # Convert normalized coordinates back to original frame size
                     cx, cy, bw, bh = det[0:4]
                     x1 = int((cx - bw / 2) * w)
@@ -641,7 +690,30 @@ class PersonDetector:
                     y2 = max(0, min(y2, h))
                     if x2 <= x1 or y2 <= y1:
                         continue
-                    rects.append([x1, y1, x2, y2])
+                    candidates.append(([x1, y1, x2, y2], float(score)))
+
+            # Apply NMS using detection scores (if available)
+            rects: List[list[int]] = []
+            if candidates:
+                try:
+                    boxes_cv = [[bx[0], bx[1], bx[2] - bx[0], bx[3] - bx[1]] for bx, _ in candidates]
+                    scores = [s for _, s in candidates]
+                    indices = cv2.dnn.NMSBoxes(boxes_cv, scores, float(self.conf_threshold), float(self.nms_threshold))
+                    # Normalize indices returned by different OpenCV versions
+                    idxs = []
+                    if isinstance(indices, (list, tuple, np.ndarray)):
+                        for x in np.array(indices).flatten():
+                            try:
+                                i = int(x)
+                                idxs.append(i)
+                            except Exception:
+                                pass
+                    for i in idxs:
+                        rects.append(candidates[i][0])
+                except Exception:
+                    # fallback to greedy NMS if OpenCV NMS fails
+                    rects = self._nms_rects([c[0] for c in candidates], iou_thresh=self.nms_threshold)
+
             return [r for r in rects if r]
         except Exception as e:
             print(f"[AI] YOLOv8 OpenVINO detection error: {e}")

@@ -9,6 +9,7 @@ from src.backend.use_case.get_student_attendance import GetStudentAttendanceUseC
 from src.backend.use_case.get_groups import GetGroupsUseCase
 from src.backend.use_case.register_student import RegisterStudentUseCase
 from src.backend.use_case.track_attendance import TrackAttendanceUseCase
+from src.backend.use_case.update_lesson_times import UpdateLessonTimesUseCase
 from src.backend.infrastructure.ai.config import (
     AttendanceTrackingConfig,
     EngagementConfig,
@@ -26,6 +27,7 @@ from src.backend.infrastructure.persistence.engagement_repository import (
 )
 from src.backend.infrastructure.video.annotated_streamer import AnnotatedVideoStreamer
 from src.backend.dependencies import settings
+import threading
 
 from src.backend.infrastructure.ai.person.detector import PersonDetector
 from src.backend.infrastructure.ai.person.pose import (
@@ -67,6 +69,7 @@ class Container:
             late_after_seconds=settings.ATTENDANCE_LATE_AFTER_SECONDS,
             stale_track_ttl_seconds=settings.STALE_TRACK_TTL_SECONDS,
             lesson_start_time=settings.LESSON_START_TIME,
+            lesson_end_time=settings.LESSON_END_TIME,
         )
         # Initialize face recognizer (lightweight implementation)
         try:
@@ -96,6 +99,15 @@ class Container:
             self.engagement_repository,
         )
 
+        # Use-case for runtime updating of lesson times (uses settings + container config)
+        self.update_lesson_times_use_case = UpdateLessonTimesUseCase(
+            self.attendance_tracking_config, settings
+        )
+        from src.backend.use_case.manual_mark_attendance import ManualMarkAttendanceUseCase
+        self.manual_mark_attendance_use_case = ManualMarkAttendanceUseCase(
+            self.attendance_repository, self.student_repository, self.attendance_tracking_config
+        )
+
         # Initialize person detector (lightweight implementation)
         try:
             # Use the lightweight `PersonDetector` (MobileNet-SSD / HOG fallback)
@@ -121,7 +133,29 @@ class Container:
             self.attendance_repository,
             config=self.attendance_tracking_config,
         )
+        # Initialize video streamer and start its background processing immediately.
+        # The streamer creates background threads when ``stream()`` is called.
+        # We keep a reference to the generator to prevent it from being garbage-collected.
         self.video_streamer = AnnotatedVideoStreamer(self.track_attendance_use_case)
+        # Start streaming generator to launch background threads for continuous monitoring.
+        self._video_generator = self.video_streamer.stream()
+
+        # Prime the generator in a background thread so capture/inference threads
+        # start immediately and monitoring runs even when nobody is viewing the UI.
+        def _prime_generator(gen):
+            try:
+                next(gen)
+            except StopIteration:
+                pass
+            except Exception as e:
+                print(f"[Container] priming video generator error: {e}")
+
+        try:
+            t = threading.Thread(target=_prime_generator, args=(self._video_generator,), daemon=True)
+            t.start()
+        except Exception:
+            pass
+
         self.student_service = StudentApplicationService(
             self.register_student_use_case,
             self.get_groups_use_case,
@@ -130,5 +164,10 @@ class Container:
             self.video_streamer,
             self.get_report_use_case,
             self.get_student_attendance_use_case,
+            self.update_lesson_times_use_case,
+            self.manual_mark_attendance_use_case,
         )
+        # Expose the pre‑started video generator to the service so the stream
+        # endpoint can reuse the already‑running background threads.
+        self.attendance_service._video_generator = self._video_generator
         self.media_service = MediaApplicationService(self.student_photo_provider)

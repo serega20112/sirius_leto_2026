@@ -1,0 +1,29 @@
+{% extends "index.html" %}
+
+{% block title %}Настройки уроков | Sirius Leto 2026{% endblock %}
+
+{% block page_title %}Настройки времени уроков{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}" />
+{% endblock %}
+
+{% block page_content %}
+<section class="lesson-settings">
+  <form method="post" action="{{ url_for('monitor.lessons_beginning') }}">
+    <div class="mb-3">
+      <label for="start_time" class="form-label">Время начала урока (HH:MM)</label>
+      <input type="time" class="form-control" id="start_time" name="start_time" value="{{ start_time }}" required />
+    </div>
+    <div class="mb-3">
+      <label for="end_time" class="form-label">Время окончания урока (HH:MM)</label>
+      <input type="time" class="form-control" id="end_time" name="end_time" value="{{ end_time }}" required />
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+  </form>
+</section>
+{% endblock %}
+
+{% block page_scripts %}
+ 
+{% endblock %}

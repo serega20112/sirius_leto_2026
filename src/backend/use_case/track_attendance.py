@@ -40,6 +40,9 @@ class TrackAttendanceUseCase:
         self.prev_gray = None
         self.track_seen_frames: dict[int, int] = {}
 
+        # latest engagement per student_id (for periodic logging)
+        self.latest_engagements: dict[str, dict] = {}
+
         self.presence_tracker: dict[str, dict[str, datetime]] = {}
         self.marked_students: dict[str, date_type] = {}
 
@@ -242,6 +245,17 @@ class TrackAttendanceUseCase:
             print(
                 f"[Track] track_id {tid} - name: {student_name} - engagement: {engagement}"
             )
+
+            # update latest engagement cache for periodic logging
+            try:
+                if student_id and student_id != "Unknown":
+                    self.latest_engagements[student_id] = {
+                        "score": engagement,
+                        "confidence": 0,
+                        "timestamp": now,
+                    }
+            except Exception:
+                pass
 
             if student_id and student_id != "Unknown":
                 presence_state = self.presence_tracker.get(student_id)
@@ -717,6 +731,16 @@ class TrackAttendanceUseCase:
             return True
 
         lesson_start_at = self._resolve_lesson_start(now)
+        # resolve lesson end time for today; support end after midnight
+        lesson_end_at = datetime.combine(now.date(), self.config.lesson_end_time)
+        if lesson_end_at <= lesson_start_at:
+            lesson_end_at = lesson_end_at + timedelta(days=1)
+
+        # Do not create new attendance logs after the lesson end time.
+        if now >= lesson_end_at:
+            print(f"[Track] now {now} is after lesson end {lesson_end_at}; skipping log for {student_id}")
+            return False
+
         delay = max(0.0, (now - lesson_start_at).total_seconds())
         is_late = now > lesson_start_at + timedelta(
             seconds=self.config.late_after_seconds

@@ -219,6 +219,11 @@ class Settings:
         ("LESSONS_BEGINNING", "LESSON_START_TIME", "lessons_begining"),
         "09:00",
     )
+    # New setting for lesson end time. Defaults to one hour after start.
+    LESSON_END_TIME = _get_time(
+        ("LESSONS_END", "LESSON_END_TIME", "lessons_end"),
+        "10:00",
+    )
 
     # Detection frequency control – skip this many frames between full detections.
     # Setting to 0 means run detection on every frame.

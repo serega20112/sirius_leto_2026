@@ -2,20 +2,14 @@
 <html lang="ru" data-bs-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{% block title %}Sirius Leto 2026{% endblock %}</title>
 
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
-      rel="stylesheet"
-    />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link
       rel="stylesheet"
@@ -29,6 +23,11 @@
     {% endblock %}
   </head>
   <body>
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+    <div id="noise-overlay" aria-hidden="true"></div>
+    <div id="cursor-dot" aria-hidden="true"></div>
+    <div id="cursor-ring" aria-hidden="true"></div>
+
     <div class="app-shell">
       <aside class="app-sidebar">
         <a class="brand-block brand-block-simple" href="/">
@@ -49,6 +48,13 @@
           >
             <i class="bi bi-people"></i>
             <span>Группы и ученики</span>
+          </a>
+          <a
+            class="nav-pill {% if request.path.startswith('/lessons') %}is-active{% endif %}"
+            href="/lessons_beginning"
+          >
+            <i class="bi bi-clock"></i>
+            <span>Настройки уроков</span>
           </a>
           <a
             class="nav-pill {% if request.path.startswith('/register') %}is-active{% endif %}"
@@ -85,84 +91,62 @@
         <header class="app-header">
           {% set subtitle %}{% block page_subtitle %}{% endblock %}{% endset %}
           <div>
-            <span class="eyebrow"
-              >{% block eyebrow %}Панель преподавателя{% endblock %}</span
-            >
-            <h1 class="page-title">
-              {% block page_title %}Мониторинг аудитории{% endblock %}
-            </h1>
+            <span class="eyebrow">{% block eyebrow %}Панель преподавателя{% endblock %}</span>
+            <h1 class="page-title">{% block page_title %}Мониторинг аудитории{% endblock %}</h1>
             {% if subtitle|trim %}
             <p class="page-subtitle">{{ subtitle|trim }}</p>
             {% endif %}
           </div>
-          <div class="header-tools">
-            <div class="live-pill">
-              <span class="pulse-dot"></span>
-              <span>Локальный поток активен</span>
-            </div>
-            <div class="app-clock" id="currentTime"></div>
-          </div>
         </header>
 
-        {% block page_content %}
-        <section class="surface-panel stats-strip">
-          <article class="stat-chip">
-            <span class="stat-chip-label">Пришли вовремя</span>
-            <strong id="statPresent" class="stat-chip-value">0</strong>
-          </article>
-          <article class="stat-chip stat-chip-warm">
-            <span class="stat-chip-label">Опоздали</span>
-            <strong id="statLate" class="stat-chip-value">0</strong>
-          </article>
-        </section>
+    {% block page_content %}
+    <section class="monitor-grid">
+      <section class="stream-panel surface-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-badge">Камера</div>
+            <h2 class="panel-title">Прямой эфир из аудитории</h2>
+          </div>
+          <span class="stream-status"><span class="pulse-dot"></span> MJPEG live</span>
+        </div>
+        <div class="video-container">
+          <div class="video-frame">
+            <img id="videoStream" src="{{ url_for('monitor.video_feed') }}" alt="Видеопоток" />
+            <div id="detection-overlays" class="detection-overlays"></div>
 
-        <section class="monitor-grid">
-          <section class="surface-panel stream-panel">
-            <div class="panel-header">
-              <div>
-                <div class="panel-badge">Камера</div>
-                <h2 class="panel-title">Прямой эфир из аудитории</h2>
+            <div class="video-hud-bar">
+              <div class="hud-left">
+                <span class="hud-label hud-rec">REC</span>
+                <span class="hud-meta">CAM-01 · AI VISION ACTIVE</span>
               </div>
-              <span class="stream-status">
-                <span class="pulse-dot"></span>
-                MJPEG live
-              </span>
-            </div>
-
-            <div class="video-frame">
-              <img
-                id="videoStream"
-                src="{{ url_for('monitor.video_feed') }}"
-                alt="Видеопоток"
-              />
-            </div>
-          </section>
-
-          <aside class="surface-panel journal-panel">
-            <div class="panel-header">
-              <div>
-                <div class="panel-badge">Журнал</div>
-                <h2 class="panel-title">Последние отметки</h2>
-                <p class="panel-copy">
-                  Лента обновляется автоматически и показывает последние
-                  зафиксированные входы.
-                </p>
+              <div class="hud-right">
+                <span id="hudClock" class="hud-timer">00:00:00</span>
               </div>
             </div>
-
-            <div id="attendanceChart" class="journal-feed">
-              <div class="feed-empty">
-                Журнал пока пуст. Как только система зафиксирует ученика, записи
-                появятся здесь.
-              </div>
-            </div>
-          </aside>
-        </section>
-        {% endblock %}
+          </div>
+        </div>
+      </section>
+      <aside class="journal-panel surface-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-badge">Журнал</div>
+            <h2 class="panel-title">Последние отметки</h2>
+          </div>
+        </div>
+        <div id="attendanceChart" class="journal-feed">
+          <div class="feed-empty"><i class="bi bi-journal-text"></i><p>Журнал пока пуст. Как только система зафиксирует ученика, записи появятся здесь.</p></div>
+        </div>
+      </aside>
+    </section>
+    {% endblock %}
       </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.3/vanilla-tilt.min.js"></script>
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     {% block page_scripts %}{% endblock %}
   </body>

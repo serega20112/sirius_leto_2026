@@ -1,71 +1,266 @@
-{% extends "index.html" %} {% block title %}Регистрация ученика | Sirius Leto
-2026{% endblock %} {% block page_title %}Добавить ученика{% endblock %} {% block
-page_styles %}
+{% extends "index.html" %} 
+
+{% block title %}Регистрация ученика | Sirius Leto 2026{% endblock %} 
+
+{% block eyebrow %}Регистрация нового ученика{% endblock %} 
+
+{% block page_title %}Добавить ученика{% endblock %} 
+
+{% block page_subtitle %}Следуйте инструкциям для регистрации лица в системе{% endblock %} 
+
+{% block page_styles %}
 <link
   rel="stylesheet"
   href="{{ url_for('static', filename='css/register.css') }}"
 />
-{% endblock %} {% block page_content %}
-<section class="register-layout">
-  <section class="surface-panel register-form-panel">
-    <div class="form-heading">
-      <h2 class="panel-title">Данные ученика</h2>
+{% endblock %} 
+
+{% block page_content %}
+<div class="progress-steps">
+  <div class="steps-container">
+    <div class="step active" data-step="1">
+      <div class="step-number">1</div>
+      <div class="step-label">Фото</div>
     </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="2">
+      <div class="step-number">2</div>
+      <div class="step-label">Данные</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="3">
+      <div class="step-number">3</div>
+      <div class="step-label">Подтверждение</div>
+    </div>
+  </div>
+</div>
 
-    <form id="registerForm" class="register-form" enctype="multipart/form-data">
-      <label class="field-shell" for="regName">
-        <span class="field-label">Имя ученика</span>
-        <input
-          type="text"
-          class="form-control"
-          id="regName"
-          name="name"
-          required
-          placeholder="Например, Иван Петров"
-        />
-      </label>
+<div class="register-layout">
+  
+  <div class="photo-upload-section">
+    <div class="surface-panel photo-upload-panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-badge">Фото</div>
+          <h2 class="panel-title">Загрузка фотографий</h2>
+          <p class="panel-copy">
+            Загрузите 3 фотографии лица с разных ракурсов
+          </p>
+        </div>
+      </div>
 
-      <label class="field-shell" for="regGroup">
-        <span class="field-label">Группа</span>
-        <input
-          type="text"
-          class="form-control"
-          id="regGroup"
-          name="group"
-          required
-          placeholder="Например, 10А"
-        />
-      </label>
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-zone-content">
+          <i class="bi bi-camera-upload"></i>
+          <h3>Перетащите фото или кликните для выбора</h3>
+          <p class="upload-hint">
+            Лицо, хорошее освещение<br>
+            Без солнцезащитных очков и головных уборов
+          </p>
+          <button type="button" class="btn btn-primary" id="selectFilesBtn">
+            <i class="bi bi-folder2-open"></i>
+            Выбрать файлы
+          </button>
+          <input 
+            type="file" 
+            id="photoInput" 
+            class="photo-input" 
+            accept="image/*" 
+            multiple 
+            required
+          />
+        </div>
+      </div>
 
-      <label class="field-shell" for="regPhoto">
-        <span class="field-label">Три фотографии</span>
-        <input
-          type="file"
-          class="form-control"
-          id="regPhoto"
-          name="photos"
-          accept="image/*"
-          multiple
-          required
-        />
-        <span id="regPhotoHint" class="upload-note">
-          Выберите ровно 3 фото с разным углом лица.
-        </span>
-      </label>
+      <div class="photo-preview" id="photoPreview" style="display: none;">
+        <div class="preview-grid">
+          
+        </div>
+        <div class="photo-instructions">
+          <i class="bi bi-info-circle"></i>
+          <p>Рекомендуется: 3 фото с разных углов лица</p>
+        </div>
+      </div>
 
-      <button type="submit" class="btn btn-primary btn-register">
-        Добавить ученика
-      </button>
+      <div class="upload-status" id="uploadStatus" style="display: none;">
+        <div class="status-content">
+          <div class="status-icon">
+            <i class="bi bi-check-circle"></i>
+          </div>
+          <div class="status-text">
+            <h4>Фото загружены</h4>
+            <p>Нажмите "Далее" для заполнения данных</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="nextToDataBtn">
+            Далее
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="data-form-section">
+    <div class="surface-panel data-form-panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-badge">Данные</div>
+          <h2 class="panel-title">Информация об ученике</h2>
+          <p class="panel-copy">
+            Заполните основные данные для регистрации
+          </p>
+        </div>
+      </div>
+
+      <form id="registerForm" class="register-form" enctype="multipart/form-data">
+        
+        <div class="form-step" id="step1" style="display: none;">
+          <div class="step-content">
+            <h3>Загрузка фотографий</h3>
+            <p>Выберите 3 фотографии лица с разных ракурсов</p>
+            
+            <div class="photo-upload-area">
+              <label class="form-label">Фотографии</label>
+              <div class="photo-drop-zone" id="photoDropZone">
+                <input 
+                  type="file" 
+                  id="regPhoto" 
+                  name="photos" 
+                  accept="image/*" 
+                  multiple 
+                  required
+                  style="display: none;"
+                />
+                <div class="drop-zone-content">
+                  <i class="bi bi-cloud-upload"></i>
+                  <p>Перетащите файлы сюда или нажмите для выбора</p>
+                  <small>Максимальный размер: 5MB на файл</small>
+                </div>
+              </div>
+              
+              <div class="photo-preview-list" id="photoPreviewList">
+              
+              </div>
+              
+              <div class="form-hint">
+                <i class="bi bi-exclamation-circle"></i>
+                <p>Ровно 3 фотографии в формате JPG или PNG</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+        <div class="form-step active" id="step2">
+          <div class="step-content">
+            <h3>Личные данные</h3>
+            
+            <div class="form-fields">
+              <div class="form-field">
+                <label class="form-label" for="regName">Имя *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="regName"
+                  name="name"
+                  required
+                  placeholder="Например, Иван"
+                />
+                <div class="field-error" id="nameError"></div>
+              </div>
+
+              <div class="form-field">
+                <label class="form-label" for="regSurname">Фамилия *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="regSurname"
+                  name="surname"
+                  required
+                  placeholder="Например, Петров"
+                />
+                <div class="field-error" id="surnameError"></div>
+              </div>
+
+              <div class="form-field">
+                <label class="form-label" for="regGroup">Группа *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="regGroup"
+                  name="group"
+                  required
+                  placeholder="Например, 10А"
+                />
+                <div class="field-error" id="groupError"></div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        
+        <div class="form-step" id="step3" style="display: none;">
+          <div class="step-content">
+            <h3>Подтверждение данных</h3>
+            <p>Проверьте введенную информацию перед сохранением</p>
+            
+            <div class="confirmation-summary">
+              <div class="summary-item">
+                <span class="summary-label">Имя:</span>
+                <span class="summary-value" id="confirmName">-</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Фамилия:</span>
+                <span class="summary-value" id="confirmSurname">-</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Группа:</span>
+                <span class="summary-value" id="confirmGroup">-</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Фотографии:</span>
+                <span class="summary-value" id="confirmPhotos">0</span>
+              </div>
+            </div>
+            
+            <div class="photo-summary" id="photoSummary">
+            </div>
+          </div>
+        </div>
+
+        
+        <div class="form-navigation">
+          <button type="button" class="btn btn-secondary" id="prevBtn" style="display: none;">
+            <i class="bi bi-arrow-left"></i>
+            Назад
+          </button>
+          
+          <button type="button" class="btn btn-primary" id="nextBtn">
+            Далее
+            <i class="bi bi-arrow-right"></i>
+          </button>
+          
+          <button type="submit" class="btn btn-primary" id="submitBtn" style="display: none;">
+            <i class="bi bi-check-circle"></i>
+            Зарегистрировать
+          </button>
+        </div>
+      </form>
+
       <div id="regStatus" class="form-status"></div>
-    </form>
-  </section>
-</section>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Профиль создан</h5>
+        <h5 class="modal-title">
+          <i class="bi bi-check-circle text-success"></i>
+          Профиль создан
+        </h5>
         <button
           type="button"
           class="btn-close"
@@ -73,15 +268,39 @@ page_styles %}
           aria-label="Закрыть"
         ></button>
       </div>
-      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-body" id="modalBody">
+        <div class="success-content">
+          <div class="success-avatar">
+            <img id="successAvatar" src="" alt="Аватар" />
+          </div>
+          <div class="success-info">
+            <h4 id="successName"></h4>
+            <p id="successGroup"></p>
+            <p class="success-text">Ученик успешно зарегистрирован в системе</p>
+          </div>
+        </div>
+      </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
           Закрыть
+        </button>
+        <button type="button" class="btn btn-secondary">
+          <i class="bi bi-person-plus"></i>
+          Добавить ещё
         </button>
       </div>
     </div>
   </div>
 </div>
-{% endblock %} {% block page_scripts %}
+
+<div class="keyboard-hints">
+  <small>
+    <i class="bi bi-keyboard"></i>
+    Ctrl+Enter — сохранить, Esc — отмена
+  </small>
+</div>
+{% endblock %} 
+
+{% block page_scripts %}
 <script src="{{ url_for('static', filename='js/register.js') }}"></script>
 {% endblock %}

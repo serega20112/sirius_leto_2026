@@ -1,121 +1,60 @@
-.register-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 760px);
-  justify-content: center;
-}
-
-.register-form-panel {
-  padding: 28px;
-}
-/* Enhanced card style for register form panel */
-.register-form-panel {
-  background: var(--panel);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-.register-form-panel:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-strong);
-}
-
-/* Field container enhancements */
-.field-shell {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.04);
-  transition: border-color 0.2s ease;
-}
-.field-shell .form-control:focus {
-  border-color: var(--accent-soft);
-}
-
-/* Primary button style for register */
-.btn-register {
-  background: linear-gradient(
-    135deg,
-    var(--accent) 0%,
-    var(--accent-strong) 100%
-  );
-  border: none;
-  color: var(--text-inverse);
-  border-radius: var(--radius-md);
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease;
-}
-.btn-register:hover,
-.btn-register:focus {
-  transform: translateY(-1px);
-  background: linear-gradient(135deg, #118e82 0%, #0b5a53 100%);
-}
-
-.form-heading {
-  margin-bottom: 20px;
-}
-
-.register-form {
-  display: grid;
-  gap: 18px;
-}
-
-.field-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.field-label {
-  color: var(--text-primary);
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.upload-note {
-  color: var(--text-secondary);
-  font-size: 0.92rem;
-  line-height: 1.55;
-}
-
-.btn-register {
-  min-height: 58px;
-  margin-top: 4px;
-}
-
-.form-status {
-  min-height: 24px;
-  color: var(--accent-strong);
-  font-weight: 800;
-}
-
-#modalBody {
-  display: grid;
-  gap: 12px;
-}
-
-#modalBody p {
-  margin: 0;
-  color: var(--text-secondary);
-}
-
-#modalBody strong {
-  color: var(--text-primary);
-}
-
-#modalBody img {
-  width: 100%;
-  max-width: 180px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-}
-
-@media (max-width: 575.98px) {
-  .register-form-panel {
-    padding: 20px;
-  }
-}
+.progress-steps { margin-bottom: 32px; }
+.steps-container { display: flex; align-items: center; justify-content: center; max-width: 600px; margin: 0 auto; }
+.step { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; }
+.step-number { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-tint); border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; margin-bottom: 8px; transition: all var(--transition-normal); }
+.step.active .step-number { background: var(--accent); border-color: var(--accent); color: var(--text-inverse); }
+.step.completed .step-number { background: var(--success); border-color: var(--success); color: var(--text-inverse); }
+.step-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-align: center; }
+.step.active .step-label { color: var(--accent); }
+.step.completed .step-label { color: var(--success); }
+.step-connector { flex: 1; height: 2px; background: var(--line); margin: 0 16px; position: relative; }
+.step.completed + .step-connector { background: var(--success); }
+.register-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; max-width: 1200px; margin: 0 auto; }
+.photo-upload-section { display: flex; flex-direction: column; gap: 24px; }
+.photo-upload-panel { padding: 24px; height: fit-content; }
+.upload-zone { border: 2px dashed var(--line); border-radius: var(--radius-lg); padding: 40px 24px; text-align: center; background: var(--bg-tint); transition: all var(--transition-normal); cursor: pointer; }
+.upload-zone:hover { border-color: var(--accent); background: var(--panel-strong); }
+.upload-zone.drag-over { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.02); }
+.upload-zone-content { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.upload-zone i { font-size: 48px; color: var(--accent); }
+.upload-zone h3 { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0; }
+.upload-hint { font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+.upload-zone .btn { margin-top: 16px; }
+.photo-input { display: none; }
+.photo-preview { margin-top: 24px; }
+.preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.preview-item { position: relative; border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 1; background: var(--bg-tint); border: 1px solid var(--line); }
+.preview-item img { width: 100%; height: 100%; object-fit: cover; }
+.preview-item .remove-btn { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: var(--danger); border: none; color: var(--text-inverse); display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity var(--transition-fast); }
+.preview-item:hover .remove-btn { opacity: 1; }
+.photo-instructions { display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--bg-tint); border: 1px solid var(--line); border-radius: var(--radius-md); font-size: 14px; color: var(--text-secondary); }
+.photo-instructions i { color: var(--accent); }
+.upload-status { margin-top: 24px; padding: 24px; background: var(--success-soft); border: 1px solid var(--success); border-radius: var(--radius-lg); text-align: center; }
+.status-icon { margin-bottom: 16px; }
+.status-icon i { font-size: 48px; color: var(--success); }
+.status-text h4 { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px 0; }
+.status-text p { font-size: 14px; color: var(--text-secondary); margin: 0 0 16px 0; }
+.upload-status .btn { min-width: 120px; }
+.data-form-section { display: flex; flex-direction: column; gap: 24px; }
+.data-form-panel { padding: 24px; height: fit-content; }
+.form-step { display: none; animation: fadeIn var(--transition-normal) ease-out; }
+.form-step.active { display: block; }
+.step-content h3 { font-size: 20px; font-weight: 600; color: var(--text-primary); margin: 0 0 12px 0; }
+.step-content p { font-size: 14px; color: var(--text-secondary); margin: 0 0 24px 0; }
+.form-fields { display: flex; flex-direction: column; gap: 20px; }
+.form-field { display: flex; flex-direction: column; gap: 8px; }
+.form-label { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.form-control { padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-tint); font-size: 14px; transition: all var(--transition-fast); }
+.form-control:focus { outline: none; border-color: var(--accent); background: var(--panel); box-shadow: 0 0 0 3px var(--accent-soft); }
+.form-control::placeholder { color: var(--text-secondary); }
+.field-error { font-size: 12px; color: var(--danger); min-height: 16px; }
+.photo-upload-area { display: flex; flex-direction: column; gap: 16px; }
+.photo-drop-zone { border: 2px dashed var(--line); border-radius: var(--radius-lg); padding: 32px; text-align: center; background: var(--bg-tint); transition: all var(--transition-normal); cursor: pointer; }
+.photo-drop-zone:hover { border-color: var(--accent); background: var(--panel-strong); }
+.photo-drop-zone.drag-over { border-color: var(--accent); background: var(--accent-soft); }
+.drop-zone-content { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.drop-zone-content i { font-size: 36px; color: var(--accent); }
+.drop-zone-content p { font-size: 14px; color: var(--text-primary); margin: 0; }
+.drop-zone-content small { font-size: 12px; color: var(--text-secondary); }
+.photo-preview-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 16px; }
+.preview-list-item { position: relative; border-radius: var(--radius-sm); overflow: hidden; aspect-ratio: 1; background: var(--bg-tint); }

@@ -62,6 +62,13 @@ totals.students + students|length %} {% endfor %} {% block title %}Группы 
                   <i class="bi bi-calendar-check"></i>
                   <span>Посмотреть</span>
                 </button>
+                <button
+                  class="btn btn-outline-danger btn-manual-status"
+                  onclick="manualStatus('{{ s.id }}')"
+                >
+                  <i class="bi bi-pencil-square"></i>
+                  <span>Ручная отметка</span>
+                </button>
 
                 <div id="details-{{ s.id }}" class="student-details d-none">
                   <div
@@ -69,6 +76,10 @@ totals.students + students|length %} {% endfor %} {% block title %}Группы 
                     class="attendance-summary-grid"
                   >
                     <div class="attendance-empty">Загрузка статистики...</div>
+                  </div>
+
+                  <div class="engagement-chart-wrapper">
+                    <canvas id="engagement-chart-{{ s.id }}" height="120"></canvas>
                   </div>
 
                   <section class="attendance-section">
@@ -98,5 +109,6 @@ totals.students + students|length %} {% endfor %} {% block title %}Группы 
   </div>
 </div>
 {% endblock %} {% block page_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/static/js/groups.js"></script>
 {% endblock %}

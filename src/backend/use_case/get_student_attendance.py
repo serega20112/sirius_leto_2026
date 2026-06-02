@@ -1,4 +1,5 @@
 from src.backend.application.exceptions import ValidationError
+from datetime import datetime, timedelta
 
 
 class GetStudentAttendanceUseCase:
@@ -96,6 +97,11 @@ class GetStudentAttendanceUseCase:
         engagement_stats = self.engagement_repo.get_engagement_stats(
             student_id, days=30
         )
+        # provide recent engagement history (7 days) for charting
+        start_date = datetime.now() - timedelta(days=7)
+        engagement_history = self.engagement_repo.get_engagement_history(
+            student_id, start_date=start_date
+        )
 
         return {
             "student": {
@@ -117,5 +123,6 @@ class GetStudentAttendanceUseCase:
             "engagement": {
                 "latest": latest_engagement,
                 "stats": engagement_stats,
+                "history": engagement_history,
             },
         }
